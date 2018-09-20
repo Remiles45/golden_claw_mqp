@@ -1,0 +1,11 @@
+<library path="src">
+  <class name="Hand Control Plugin" type="rqt_gui_control.rqt_gui_module.RobotHandPlugin" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      GUI for operating Reflex SF hand using the Data Glove
+    </description>
+    <qtgui>
+      <label>Reflex Hand Controller</label>
+      <icon type="theme">system-help</icon>
+    </qtgui>
+  </class>
+</library>

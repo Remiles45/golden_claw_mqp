@@ -1,0 +1,3 @@
+motor_name: ['_f1','_f2','f3','_preshape']
+yaml_zero_path: 'reflex_sf_zero_points.yaml'
+yaml_path: '/yaml/reflex_sf.yaml'

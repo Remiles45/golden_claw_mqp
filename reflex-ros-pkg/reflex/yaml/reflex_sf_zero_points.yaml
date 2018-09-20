@@ -1,0 +1,5 @@
+reflex_sf_f1: {zero_point: 2.4390294527381697}
+reflex_sf_f2: {zero_point: 2.853204265467293}
+reflex_sf_f3: {zero_point: 3.528155812136975}
+reflex_sf_k1: {zero_point: 3.7838192767845817}
+reflex_sf_k2: {zero_point: 1.7333982903107745}

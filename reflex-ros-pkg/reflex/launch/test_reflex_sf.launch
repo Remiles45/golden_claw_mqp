@@ -1,0 +1,8 @@
+<launch>
+    <!-- The latest reflex_sf rosbag gets stored in the bagfiles folder -->
+    <!-- Play this file bag, rename it to save it, or use it for debugging as desired -->
+    <rosparam file="$(find reflex)/yaml/test_declared.yaml" command="load"/>
+    <rosparam file="$(find reflex)/yaml/reflex_sf.yaml" command="load"/>
+    <rosparam file="$(find reflex)/yaml/reflex_sf_zero_points.yaml" command="load"/>
+    <node name="reflex_sf_hand_v3" pkg="reflex" type="reflex_sf_hand_v3.py" required="true" output="screen"/>
+</launch>

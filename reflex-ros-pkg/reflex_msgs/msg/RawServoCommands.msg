@@ -1,0 +1,1 @@
+uint16[20] raw_positions
