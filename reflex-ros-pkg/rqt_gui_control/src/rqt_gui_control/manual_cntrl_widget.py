@@ -1,3 +1,5 @@
+import os
+import rospkg
 import rospy
 from python_qt_binding.QtWidgets import * #QWidget, QToolTip,QPushButton,QLabel,QGridLayout,QLineEdit
 from python_qt_binding.QtGui import * #QFont,QPalette, QColor
@@ -8,6 +10,7 @@ from std_msgs.msg import Int16MultiArray
 from reflex_msgs.msg import PoseCommand
 from rqt_service.srv import SendTwoInt
 from reflex_msgs.msg import Hand
+import socket
 
 class ManualHandControlWidget(QWidget):
 
@@ -19,7 +22,7 @@ class ManualHandControlWidget(QWidget):
         rospy.Subscriber('/reflex_sf/hand_state', Hand, self.hand_state_cb)
         rospy.Subscriber('/chatter',Int16MultiArray, self.received_int)####FIXME
         #rospy.init_node('listener', anonymous=True)
-
+        self.currentGrasp = []
         self.initUI()
 
     def initUI(self):
@@ -130,8 +133,6 @@ class ManualHandControlWidget(QWidget):
         self.combo_label = QLabel("Targeted Device")
         self.combo = QComboBox(self)
         self.combo.addItem("ReflexSF")
-        # self.combo.addItem("MQP Hand")
-        # self.combo.addItem("Rviz/Gazebo Simulation")
 ############ Glove Section #############################################################################
         self.glove_label = QLabel("Glove Interface")
 
@@ -157,6 +158,12 @@ class ManualHandControlWidget(QWidget):
 
 ##########################################################################################################
         self.listPose = []
+        self.grasplist = []
+        self.filename = []
+    #Test List view
+
+                # self.readGrasp()
+
         pose0 = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=0.0)
         self.listPose.append(pose0)
         #Test List view
@@ -169,13 +176,15 @@ class ManualHandControlWidget(QWidget):
 
         #List Control
         self.list_control_label = QLabel("Waypoint Control")
-        self.list_control_save_button = QPushButton("Save")
-        self.list_control_delete_button = QPushButton("Remove")
-        self.list_control_go_button = QPushButton("Go waypoints")
+        self.list_control_save_button = QPushButton("Add Waypoint")
+        self.list_control_delete_button = QPushButton("Remove Waypoint")
+        self.list_control_go_button = QPushButton("Execute Waypoints")#TODO does not seem to send messages
+        self.list_control_save_grasp = QPushButton("Save Grasp")
         self.list_control = QHBoxLayout()
         self.list_control.addWidget(self.list_control_save_button)
         self.list_control.addWidget(self.list_control_delete_button)
         self.list_control.addWidget(self.list_control_go_button)
+        self.list_control.addWidget(self.list_control_save_grasp)
 ############ Adding rows and set up singal for button ####################################################
         #QFormLayout similar to HBox but you know it look like form, add everything to FormLayout
         self.fbox = QFormLayout()
@@ -205,6 +214,7 @@ class ManualHandControlWidget(QWidget):
         self.list_control_save_button.clicked.connect(self.handle_list_control_save_button)
         self.list_control_delete_button.clicked.connect(self.handle_list_control_delete_button)
         self.list_control_go_button.clicked.connect(self.handle_list_control_go_button)
+        self.list_control_save_grasp.clicked.connect(self.handle_grasp_save_button)
 
 ######### Set up window ###################################################################################
         #Set the widget to layout and show the widget
@@ -230,12 +240,20 @@ class ManualHandControlWidget(QWidget):
         self.listWidget.addItem(item)
 
     def handle_list_control_delete_button(self):
-        print "remove button click"
-        dummy = self.listPose.pop(self.listWidget.currentRow())
-        dummyItem = self.listWidget.takeItem(self.listWidget.currentRow())
+        #TODO remove the item from the displayed list
+        #     or alternatively, have current window be command window?
+        #     then have separate window displaying list of the waypoints?
+
+        if (self.listPose != []):
+            dummy = self.listPose.pop(self.listWidget.currentRow())
+            dummyItem = self.listWidget.takeItem(self.listWidget.currentRow())
+            print "Removed Waypoint ", dummy
+        else:
+            print "Could not remove waypoint: No waypoint found"
 
 
     def handle_list_control_go_button(self):
+        #TODO bring up menu to select file from directory
         scaled_float_1 = 1.0
         scaled_float_2 = 1.0
         scaled_float_3 = 1.0
@@ -246,10 +264,74 @@ class ManualHandControlWidget(QWidget):
             self.value_glove_2.setText("%2.2f" % scaled_float_2)
             self.value_glove_3.setText("%2.2f" % scaled_float_3)
             data = str(scaled_float_1) + ";" +str(scaled_float_2) + ";" + str(scaled_float_3) + "\n"
-            filename = "data/grasp1.txt"
+            filename = "data/grasp1.txt"# I dont think this should be here?
             file = open(filename, "a")
             file.write(data)
             file.close()
+
+#############################################################################################################
+    def handle_grasp_save_button(self):
+        #TODO prompt to edit filename/path
+        abspath = os.path.abspath(__file__)
+
+        folderdatapath = abspath[:-len('/src/rqt_gui_control/manual_cntrl_widget.py')] + '/data'
+        name = 'grasp'+str(len(self.filename))+'.txt'
+        filename = folderdatapath + '/' + name
+
+        print("saving data to " + name)
+        for point in self.listPose:
+            data = str(point) #str(point[0]) + ";" +str(point[1]) + ";" + str(point[2]) + "\n"
+            file = open(filename, "a")
+            file.write(data)
+            file.close()
+
+        self.filename.append(name)
+        self.grasplist.append(filename)
+        item = QListWidgetItem(name)
+        self.listWidget.addItem(item)
+
+    # def handle_grasp_control_delete_button(self):
+    #     print "Remove Grasp"
+    #     dummy = self.filename.pop(self.listWidget.currentRow())
+    #     dummy2 = self.grasplist.pop(self.listWidget.currentRow())
+    #
+    #     dummyItem = self.listWidget.takeItem(self.listWidget.currentRow())
+    #
+
+    def handle_grasp_control_go_button(self):
+        #TODO I would like a button to open a window where the default
+        #     path is to /data and you select the file and click "open"
+        #     and have it execute from there
+        currentChoicepath = self.grasplist[self.listWidget.currentRow()]
+        currentChoicename = self.filename[self.listWidget.currentRow()]
+        print("Execute grasp: " + currentChoicename)
+        file = open(currentChoicepath,'r').read()
+
+        lines = file.split('\n')
+        executionPose = []
+        for line in lines:
+            if len(line) > 1:
+                s1,s2,s3 = line.split(';')
+                executionPose.append([float(s1),float(s2),float(s3)])
+
+        for pose in executionPose:
+            scaled_float_1 = pose[0]
+            scaled_float_2 = pose[1]
+            scaled_float_3 = pose[2]
+            # Scale raw value into readable value
+            self.value_glove_1.setText("%2.2f" % scaled_float_1)
+            self.value_glove_2.setText("%2.2f" % scaled_float_2)
+            self.value_glove_3.setText("%2.2f" % scaled_float_3)
+
+            tar_f1 = scaled_float_2
+            tar_f2 = scaled_float_3
+            tar_f3 = scaled_float_1
+            tar_f4 = float(self.value_slider_4.toPlainText())
+            poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_f4)
+            self.command_pub.publish(poseTarget)
+
+            rospy.sleep(0.2)
+        print "Finish Grasp"
 ######### valuechange for updating goal label ###############################################################
     def valuechange1(self):
         float_value = float(self.finger_slider_1.value())/100.0
@@ -364,27 +446,6 @@ class ManualHandControlWidget(QWidget):
             file = open(filename, "a")
             file.write(data)
             file.close()
-            # Based on the Combo box decided what to do with the value
-            # if (self.combo.currentText() == "Rviz/Gazebo Simulation"):
-            #     tar_f1 = scaled_float_2
-            #     tar_f2 = scaled_float_2
-            #     tar_f3 = scaled_float_1
-            #     tar_f4 = scaled_float_3
-            #     hand = Hand()
-            #     hand.motor[0].joint_angle = tar_f1
-            #     hand.motor[1].joint_angle = tar_f2
-            #     hand.motor[2].joint_angle = tar_f3
-            #     hand.motor[3].joint_angle = tar_f4
-            #     self.command_pub_sim.publish(hand)
-            # elif (self.combo.currentText() == "MQP Hand"):
-            #     tar_f1 = scaled_float_3
-            #     tar_f2 = scaled_float_2
-            #     tar_f3 = scaled_float_1
-            #     tar_f4 = float(self.value_slider_4.toPlainText())
-            #     tar_f5 = float(self.value_slider_5.toPlainText())
-            #     poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_f4,k2=tar_f5)
-            #     self.command_pub.publish(poseTarget)
-            # else:
             tar_f1 = scaled_float_2
             tar_f2 = scaled_float_3
             tar_f3 = scaled_float_1
