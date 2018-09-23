@@ -17,9 +17,8 @@ class ManualHandControlWidget(QWidget):
     def __init__(self):
         super(ManualHandControlWidget, self).__init__()
         self.command_pub = rospy.Publisher('/reflex_sf/command_position', PoseCommand, queue_size=1)
-        # self.command_pub_sim = rospy.Publisher('/reflex_sf/hand_state', Hand, queue_size=1)
         # Constantly capture the current hand state
-        rospy.Subscriber('/reflex_sf/hand_state', Hand, self.hand_state_cb)
+        # rospy.Subscriber('/reflex_sf/hand_state', Hand, self.hand_state_cb)
         rospy.Subscriber('/chatter',Int16MultiArray, self.received_int)####FIXME
         #rospy.init_node('listener', anonymous=True)
         self.currentGrasp = []
@@ -28,12 +27,14 @@ class ManualHandControlWidget(QWidget):
     def initUI(self):
 
 ################## Position Control GUI ########################################################################
+#Fingers: slider range 0 -> 400
         #Finger 1 row
         self.finger_label_1 = QLabel("Goal for f1")
         self.finger_slider_1 = QSlider(1)
         self.finger_slider_1.setMinimum(0)
         self.finger_slider_1.setMaximum(400)
         self.finger_slider_1.setValue(200)
+
         self.value_slider_1 = QTextEdit("2.00")
         self.value_slider_1.setMaximumSize(80,20)
         self.hbox_f1 = QHBoxLayout()
@@ -55,7 +56,6 @@ class ManualHandControlWidget(QWidget):
 
         #Finger 3 row
         self.finger_label_3 = QLabel("Goal for f3")
-        #finger_slider_3 = QLineEdit()
         self.finger_slider_3 = QSlider(1)
         self.finger_slider_3.setMinimum(0)
         self.finger_slider_3.setMaximum(400)
@@ -66,10 +66,9 @@ class ManualHandControlWidget(QWidget):
         self.hbox_f3 = QHBoxLayout()
         self.hbox_f3.addWidget(self.finger_slider_3)
         self.hbox_f3.addWidget(self.value_slider_3)
-
-        #Preshape k1
-        self.finger_label_4 = QLabel("Goal for f_preshape k1")
-        #finger_slider_4 = QLineEdit()
+#Preshape: slider range 0 -> 400
+        #Preshape k1 (index/middle fingers)
+        self.finger_label_4 = QLabel("Distance between fingers 1 and 2") #actually check that im not lying
         self.finger_slider_4 = QSlider(1)
         self.finger_slider_4.setMinimum(0)
         self.finger_slider_4.setMaximum(400)
@@ -82,7 +81,7 @@ class ManualHandControlWidget(QWidget):
         self.hbox_f4.addWidget(self.value_slider_4)
 
         #Preshape k2
-        self.finger_label_5 = QLabel("Goal for f_preshape")
+        self.finger_label_5 = QLabel("Thumb Rotation")#acutally check this one is the thumb
         self.finger_slider_5 = QSlider(1)
         self.finger_slider_5.setMinimum(0)
         self.finger_slider_5.setMaximum(400)
@@ -102,12 +101,12 @@ class ManualHandControlWidget(QWidget):
         self.tick_f1 = QCheckBox("F1")
         self.tick_f2 = QCheckBox("F2")
         self.tick_f3 = QCheckBox("F3")
-        self.tick_f4 = QCheckBox("Preshape")
+        # self.tick_f4 = QCheckBox("Preshape")
 
         self.hbox_tick.addWidget(self.tick_f1)
         self.hbox_tick.addWidget(self.tick_f2)
         self.hbox_tick.addWidget(self.tick_f3)
-        self.hbox_tick.addWidget(self.tick_f4)
+        # self.hbox_tick.addWidget(self.tick_f4)
         self.hbox_tick.addStretch()
 
         self.tick_f1_state = 0
@@ -117,18 +116,19 @@ class ManualHandControlWidget(QWidget):
         self.tick_f1.stateChanged.connect(lambda:self.tickchange(self.tick_f1))
         self.tick_f2.stateChanged.connect(lambda:self.tickchange(self.tick_f2))
         self.tick_f3.stateChanged.connect(lambda:self.tickchange(self.tick_f3))
-        self.tick_f4.stateChanged.connect(lambda:self.tickchange(self.tick_f4))
+        ######is this actually controlling the hand? or JUST coupling
+        # self.tick_f4.stateChanged.connect(lambda:self.tickchange(self.tick_f4))
 
 ########### Command Row Button ############################################################################
-        self.command_label = QLabel("Command")
+        self.command_label = QLabel("Manual Command Hand")
         self.go_button = QPushButton("Go to set values")
-        self.home_button = QPushButton("Reset Finger Positions")
         self.re_button = QPushButton("Reset Goal Values")
+        self.home_button = QPushButton("Reset Finger Positions")
 
         self.hbox_command = QHBoxLayout()
         self.hbox_command.addWidget(self.go_button)
-        self.hbox_command.addWidget(self.home_button)
         self.hbox_command.addWidget(self.re_button)
+        self.hbox_command.addWidget(self.home_button)
 ########### Combo section ############################################################################
         self.combo_label = QLabel("Targeted Device")
         self.combo = QComboBox(self)
@@ -160,9 +160,6 @@ class ManualHandControlWidget(QWidget):
         self.listPose = []
         self.grasplist = []
         self.filename = []
-    #Test List view
-
-                # self.readGrasp()
 
         pose0 = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=0.0)
         self.listPose.append(pose0)
@@ -178,13 +175,15 @@ class ManualHandControlWidget(QWidget):
         self.list_control_label = QLabel("Waypoint Control")
         self.list_control_save_button = QPushButton("Add Waypoint")
         self.list_control_delete_button = QPushButton("Remove Waypoint")
-        self.list_control_go_button = QPushButton("Execute Waypoints")#TODO does not seem to send messages
+        self.list_control_execute_waypoints = QPushButton("Execute Waypoints")#TODO does not seem to send messages
         self.list_control_save_grasp = QPushButton("Save Grasp")
+        self.list_control_execute_existing_grasp = QPushButton("Execute Grasp File")
         self.list_control = QHBoxLayout()
         self.list_control.addWidget(self.list_control_save_button)
         self.list_control.addWidget(self.list_control_delete_button)
-        self.list_control.addWidget(self.list_control_go_button)
+        self.list_control.addWidget(self.list_control_execute_waypoints)
         self.list_control.addWidget(self.list_control_save_grasp)
+        self.list_control.addWidget(self.list_control_execute_existing_grasp)
 ############ Adding rows and set up singal for button ####################################################
         #QFormLayout similar to HBox but you know it look like form, add everything to FormLayout
         self.fbox = QFormLayout()
@@ -213,9 +212,9 @@ class ManualHandControlWidget(QWidget):
 
         self.list_control_save_button.clicked.connect(self.handle_list_control_save_button)
         self.list_control_delete_button.clicked.connect(self.handle_list_control_delete_button)
-        self.list_control_go_button.clicked.connect(self.handle_list_control_go_button)
+        self.list_control_execute_waypoints.clicked.connect(self.handle_execute_waypoints)
         self.list_control_save_grasp.clicked.connect(self.handle_grasp_save_button)
-
+        self.list_control_execute_existing_grasp.clicked.connect(self.handle_run_existing_grasp_button)
 ######### Set up window ###################################################################################
         #Set the widget to layout and show the widget
         self.setLayout(self.fbox)
@@ -241,8 +240,7 @@ class ManualHandControlWidget(QWidget):
 
     def handle_list_control_delete_button(self):
         #TODO remove the item from the displayed list
-        #     or alternatively, have current window be command window?
-        #     then have separate window displaying list of the waypoints?
+        #i.e. have the window be just the list of waypoints
 
         if (self.listPose != []):
             dummy = self.listPose.pop(self.listWidget.currentRow())
@@ -252,8 +250,10 @@ class ManualHandControlWidget(QWidget):
             print "Could not remove waypoint: No waypoint found"
 
 
-    def handle_list_control_go_button(self):
+    def handle_execute_waypoints(self):
         #TODO bring up menu to select file from directory
+        #actually on second thought not sure what this is doing. just reading from glove?
+        #no clue why it is writing to a file that doesnt exist
         scaled_float_1 = 1.0
         scaled_float_2 = 1.0
         scaled_float_3 = 1.0
@@ -272,67 +272,61 @@ class ManualHandControlWidget(QWidget):
 #############################################################################################################
     def handle_grasp_save_button(self):
         #TODO prompt to edit filename/path
+        #BHON: replace next 4 lines with prompt to select save directory+ rename file
         abspath = os.path.abspath(__file__)
-
         folderdatapath = abspath[:-len('/src/rqt_gui_control/manual_cntrl_widget.py')] + '/data'
         name = 'grasp'+str(len(self.filename))+'.txt'
         filename = folderdatapath + '/' + name
 
-        print("saving data to " + name)
-        for point in self.listPose:
-            data = str(point) #str(point[0]) + ";" +str(point[1]) + ";" + str(point[2]) + "\n"
-            file = open(filename, "a")
-            file.write(data)
-            file.close()
+        #write waypoint list to file
+        if len(self.listPose) > 0:
+            print 'saved ' + str(len(self.listPose)) + ' waypoints to ' + name
+            count = 0
+            for point in self.listPose:
+                #add indicator for each chunk of data
+                data = "//" + str(point)
+                file = open(filename, "a")
+                file.write(data)
+                file.close()
+        else:
+            print "No waypoints to save"
 
         self.filename.append(name)
         self.grasplist.append(filename)
         item = QListWidgetItem(name)
         self.listWidget.addItem(item)
 
-    # def handle_grasp_control_delete_button(self):
-    #     print "Remove Grasp"
-    #     dummy = self.filename.pop(self.listWidget.currentRow())
-    #     dummy2 = self.grasplist.pop(self.listWidget.currentRow())
-    #
-    #     dummyItem = self.listWidget.takeItem(self.listWidget.currentRow())
-    #
 
-    def handle_grasp_control_go_button(self):
+    def handle_run_existing_grasp_button(self):
         #TODO I would like a button to open a window where the default
         #     path is to /data and you select the file and click "open"
         #     and have it execute from there
+
+        #BHON: replace next 4 lines  with prompt to choose destination file (default /data)
+        # and rename file.
         currentChoicepath = self.grasplist[self.listWidget.currentRow()]
         currentChoicename = self.filename[self.listWidget.currentRow()]
         print("Execute grasp: " + currentChoicename)
         file = open(currentChoicepath,'r').read()
 
-        lines = file.split('\n')
-        executionPose = []
-        for line in lines:
-            if len(line) > 1:
-                s1,s2,s3 = line.split(';')
-                executionPose.append([float(s1),float(s2),float(s3)])
+        #Divide file by pose commands
+        data_chunks = file.split('//')
+        for pose in data_chunks:
+            if len(pose) > 1:
+                #divide each pose up by commands per finger
+                f1,f2,f3,k1,k2 = pose.split('\n')
+                #choose only the numerical chunk of command and convert to float
+                tar_f1 = float(f1.split(': ')[1])
+                tar_f2 = float(f2.split(': ')[1])
+                tar_f3 = float(f3.split(': ')[1])
+                tar_k1 = float(k1.split(': ')[1])
 
-        for pose in executionPose:
-            scaled_float_1 = pose[0]
-            scaled_float_2 = pose[1]
-            scaled_float_3 = pose[2]
-            # Scale raw value into readable value
-            self.value_glove_1.setText("%2.2f" % scaled_float_1)
-            self.value_glove_2.setText("%2.2f" % scaled_float_2)
-            self.value_glove_3.setText("%2.2f" % scaled_float_3)
+                poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1) #preshape=tar_f4)
+                self.command_pub.publish(poseTarget)
+        rospy.sleep(0.2)
 
-            tar_f1 = scaled_float_2
-            tar_f2 = scaled_float_3
-            tar_f3 = scaled_float_1
-            tar_f4 = float(self.value_slider_4.toPlainText())
-            poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_f4)
-            self.command_pub.publish(poseTarget)
-
-            rospy.sleep(0.2)
-        print "Finish Grasp"
 ######### valuechange for updating goal label ###############################################################
+#Coupling of fingers, updating finger slider values
     def valuechange1(self):
         float_value = float(self.finger_slider_1.value())/100.0
         self.value_slider_1.setText("%2.2f" % float_value)
@@ -343,19 +337,32 @@ class ManualHandControlWidget(QWidget):
             if self.tick_f3_state:
                 self.value_slider_3.setText("%2.2f" % float_value)
                 self.finger_slider_3.setValue(self.finger_slider_1.value())
-            if self.tick_f4_state:
-                self.value_slider_4.setText("%2.2f" % float_value)
-                self.finger_slider_4.setValue(self.finger_slider_1.value())
 
 
     def valuechange2(self):
         float_value = float(self.finger_slider_2.value())/100.0
         self.value_slider_2.setText("%2.2f" % float_value)
+        if self.tick_f2_state:
+            if self.tick_f1_state:
+                self.value_slider_1.setText("%2.2f" % float_value)
+                self.finger_slider_1.setValue(self.finger_slider_2.value())
+            if self.tick_f3_state:
+                self.value_slider_3.setText("%2.2f" % float_value)
+                self.finger_slider_3.setValue(self.finger_slider_2.value())
+
 
     def valuechange3(self):
         float_value = float(self.finger_slider_3.value())/100.0
         self.value_slider_3.setText("%2.2f" % float_value)
+        if self.tick_f3_state:
+            if self.tick_f1_state:
+                self.value_slider_1.setText("%2.2f" % float_value)
+                self.finger_slider_1.setValue(self.finger_slider_3.value())
+            if self.tick_f2_state:
+                self.value_slider_2.setText("%2.2f" % float_value)
+                self.finger_slider_2.setValue(self.finger_slider_3.value())
 
+#Update preshape slider values
     def valuechange4(self):
         float_value = float(self.finger_slider_4.value())/100.0
         self.value_slider_4.setText("%2.2f" % float_value)
@@ -381,11 +388,6 @@ class ManualHandControlWidget(QWidget):
                 self.tick_f3_state = 1
             else:
                 self.tick_f3_state = 0
-        if b.text() == "Preshape":
-            if b.isChecked() == True:
-                self.tick_f4_state = 1
-            else:
-                self.tick_f4_state = 0
         if b.text() == "ON/OFF":
             if b.isChecked() == True:
                 self.tick_glove_state = 1
@@ -397,22 +399,25 @@ class ManualHandControlWidget(QWidget):
 
 ######### Command Button handler ############################################################################
     def handleButtonGo(self):
+        #send current slider values to hand
+        tar_f1 = float(self.value_slider_1.toPlainText())
+        tar_f2 = float(self.value_slider_2.toPlainText())
+        tar_f3 = float(self.value_slider_3.toPlainText())
+        tar_k1 = float(self.value_slider_4.toPlainText())
+        tar_k2 = float(self.value_slider_5.toPlainText())
 
-            tar_f1 = float(self.value_slider_1.toPlainText())
-            tar_f2 = float(self.value_slider_2.toPlainText())
-            tar_f3 = float(self.value_slider_3.toPlainText())
-            tar_f4 = float(self.value_slider_4.toPlainText())
-            print "Go Button Click with target"
-            print(tar_f1,tar_f2,tar_f3,tar_f4)
-            poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_f4) #preshape=tar_f4)
-            self.command_pub.publish(poseTarget)
+        print "Sending Hand to: "
+        print(tar_f1,tar_f2,tar_f3,tar_k1,tar_k2)
+        poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=tar_k2)
+        self.command_pub.publish(poseTarget)
 
     def handleButtonHome(self):
+        #send the fingers to home positions
         poseTarget = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=0.0)
         self.command_pub.publish(poseTarget)
-        print "Home Button Click"
 
     def handleButtonReset(self):
+        #set slider values to 0
         self.finger_slider_1.setValue(0)
         self.value_slider_1.setText("0.00")
         self.finger_slider_2.setValue(0)
@@ -421,16 +426,22 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_3.setText("0.00")
         self.finger_slider_4.setValue(0)
         self.value_slider_4.setText("0.00")
-        print "Reset Button Click"
+        self.finger_slider_5.setValue(0)
+        self.value_slider_5.setText("0.00")
+
+
     ## Update Value of the hand for checking for waypoint
-    def hand_state_cb(self, hand):
-        self.current_angle[0] = hand.motor[0].joint_angle
-        self.current_angle[1] = hand.motor[1].joint_angle
-        self.current_angle[2] = hand.motor[2].joint_angle
-        self.current_angle[3] = hand.motor[3].joint_angle
+    #but bruh why? what is the point. why you do this.
+    # def hand_state_cb(self, hand):
+    #     self.current_angle[0] = hand.motor[0].joint_angle
+    #     self.current_angle[1] = hand.motor[1].joint_angle
+    #     self.current_angle[2] = hand.motor[2].joint_angle
+    #     self.current_angle[3] = hand.motor[3].joint_angle
 
     # Receive messages from
     def received_int(self, value_received):
+        #Callback for Glove MSGs
+        #TODO figure out wtf is going on here
         scaled_float_1 = 2.0-(float(value_received.data[0])-450.0)/100.0
         scaled_float_2 = 2.0-(float(value_received.data[1])-500.0)/80.0
         scaled_float_3 = 2.0 - (float(value_received.data[2])-440)/80.0
@@ -442,6 +453,7 @@ class ManualHandControlWidget(QWidget):
             self.value_glove_2.setText("%2.2f" % scaled_float_2)
             self.value_glove_3.setText("%2.2f" % scaled_float_3)
             data = str(scaled_float_1) + ";" +str(scaled_float_2) + ";" + str(scaled_float_3) + "\n"
+            #why are they writing to a file????????? wtf is going on here. Im so confused
             filename = "data/grasp1.txt"
             file = open(filename, "a")
             file.write(data)
