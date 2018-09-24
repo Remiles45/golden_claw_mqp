@@ -11,6 +11,7 @@ from reflex_msgs.msg import PoseCommand
 from rqt_service.srv import SendTwoInt
 from reflex_msgs.msg import Hand
 import socket
+from std_msgs.msg import UInt16
 
 class ManualHandControlWidget(QWidget):
 
@@ -23,6 +24,12 @@ class ManualHandControlWidget(QWidget):
         #rospy.init_node('listener', anonymous=True)
         self.currentGrasp = []
         self.initUI()
+        #soft hand
+        self.command_pub_softhand_1 = rospy.Publisher('UbirosGentlePro1', UInt16, queue_size=1)
+        self.command_pub_softhand_2 = rospy.Publisher('UbirosGentlePro2', UInt16, queue_size=1)
+        self.command_pub_softhand_3 = rospy.Publisher('UbirosGentlePro3', UInt16, queue_size=1)
+        self.command_pub_softhand_4 = rospy.Publisher('UbirosGentlePro4', UInt16, queue_size=1)
+
 
     def initUI(self):
 
@@ -401,21 +408,33 @@ class ManualHandControlWidget(QWidget):
 ######### Command Button handler ############################################################################
     def handleButtonGo(self):
         #send current slider values to hand
-        tar_f1 = float(self.value_slider_1.toPlainText())
-        tar_f2 = float(self.value_slider_2.toPlainText())
-        tar_f3 = float(self.value_slider_3.toPlainText())
-        tar_k1 = float(self.value_slider_4.toPlainText())
-        tar_k2 = float(self.value_slider_5.toPlainText())
+        if self.combo.currentText() == "ReflexSF":
+            tar_f1 = float(self.value_slider_1.toPlainText())
+            tar_f2 = float(self.value_slider_2.toPlainText())
+            tar_f3 = float(self.value_slider_3.toPlainText())
+            tar_k1 = float(self.value_slider_4.toPlainText())
+            tar_k2 = float(self.value_slider_5.toPlainText())
 
-        print "Sending Hand to: "
-        print(tar_f1,tar_f2,tar_f3,tar_k1,tar_k2)
-        poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=tar_k2)
-        self.command_pub.publish(poseTarget)
+            print "Sending Hand to: "
+            print(tar_f1,tar_f2,tar_f3,tar_k1,tar_k2)
+            poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=tar_k2)
+            self.command_pub.publish(poseTarget)
+        elif self.combo.currentText() == "Soft Hand":
+            tar_f1 = int(float(self.value_slider_1.toPlainText())*25)
+            tar_f2 = int(float(self.value_slider_2.toPlainText())*25)
+            tar_f3 = int(float(self.value_slider_3.toPlainText())*25)
+            tar_k1 = int(float(self.value_slider_4.toPlainText())*25)
+
+            print "Sending Hand to: "
+            print(tar_f1,tar_f2,tar_f3,tar_k1)
+            self.softHand_pose(f1=tar_f1,f2=tar_f2,f3=tar_f3,f4=tar_k1)
+
 
     def handleButtonHome(self):
         #send the fingers to home positions
         poseTarget = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=0.0)
         self.command_pub.publish(poseTarget)
+        self.softHand_pose(f1=30,f2=30,f3=30,f4=30)
 
     def handleButtonReset(self):
         #set slider values to 0
@@ -438,6 +457,16 @@ class ManualHandControlWidget(QWidget):
     #     self.current_angle[1] = hand.motor[1].joint_angle
     #     self.current_angle[2] = hand.motor[2].joint_angle
     #     self.current_angle[3] = hand.motor[3].joint_angle
+
+    def softHand_pose(self,f1,f2,f3,f4):
+        f1 = 100 if int(f1) > 100 else int(f1)
+        f2 = 100 if int(f2) > 100 else int(f2)
+        f3 = 100 if int(f3) > 100 else int(f3)
+        f4 = 100 if int(f4) > 100 else int(f4)
+        self.command_pub_softhand_1.publish(f1)
+        self.command_pub_softhand_2.publish(f2)
+        self.command_pub_softhand_3.publish(f3)
+        self.command_pub_softhand_4.publish(f4)
 
     # Receive messages from
     def received_int(self, value_received):
@@ -463,5 +492,11 @@ class ManualHandControlWidget(QWidget):
             tar_f2 = scaled_float_3
             tar_f3 = scaled_float_1
             tar_f4 = float(self.value_slider_4.toPlainText())
-            poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,preshape=tar_f4)
-            self.command_pub.publish(poseTarget)
+            # poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,preshape=tar_f4)
+            # self.command_pub.publish(poseTarget)
+
+            if self.combo.currentText() == "ReflexSF":
+                poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,preshape=tar_f4)
+                self.command_pub.publish(poseTarget)
+            elif self.combo.currentText() == "Soft Hand":
+                self.softHand_pose(f1=tar_f1,f2=tar_f2,f3=tar_f3,f4=tar_f4)
