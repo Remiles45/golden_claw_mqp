@@ -68,7 +68,7 @@ class ManualHandControlWidget(QWidget):
         self.hbox_f3.addWidget(self.value_slider_3)
 #Preshape: slider range 0 -> 400
         #Preshape k1 (index/middle fingers)
-        self.finger_label_4 = QLabel("Distance between fingers 1 and 2") #actually check that im not lying
+        self.finger_label_4 = QLabel("Distance between fingers 1 and 2 (Soft Hand F4)") #actually check that im not lying
         self.finger_slider_4 = QSlider(1)
         self.finger_slider_4.setMinimum(0)
         self.finger_slider_4.setMaximum(400)
@@ -81,7 +81,7 @@ class ManualHandControlWidget(QWidget):
         self.hbox_f4.addWidget(self.value_slider_4)
 
         #Preshape k2
-        self.finger_label_5 = QLabel("Thumb Rotation")#acutally check this one is the thumb
+        self.finger_label_5 = QLabel("Thumb Rotation (Soft Hand: N/A)")#acutally check this one is the thumb
         self.finger_slider_5 = QSlider(1)
         self.finger_slider_5.setMinimum(0)
         self.finger_slider_5.setMaximum(400)
@@ -133,6 +133,7 @@ class ManualHandControlWidget(QWidget):
         self.combo_label = QLabel("Targeted Device")
         self.combo = QComboBox(self)
         self.combo.addItem("ReflexSF")
+        self.combo.addItem("Soft Hand")
 ############ Glove Section #############################################################################
         self.glove_label = QLabel("Glove Interface")
 
@@ -272,7 +273,7 @@ class ManualHandControlWidget(QWidget):
 #############################################################################################################
     def handle_grasp_save_button(self):
         #TODO prompt to edit filename/path
-        #BHON: replace next 4 lines with prompt to select save directory+ rename file
+        #replace next 4 lines with prompt to select save directory+ rename file
         abspath = os.path.abspath(__file__)
         folderdatapath = abspath[:-len('/src/rqt_gui_control/manual_cntrl_widget.py')] + '/data'
         name = 'grasp'+str(len(self.filename))+'.txt'
@@ -302,7 +303,7 @@ class ManualHandControlWidget(QWidget):
         #     path is to /data and you select the file and click "open"
         #     and have it execute from there
 
-        #BHON: replace next 4 lines  with prompt to choose destination file (default /data)
+        #replace next 4 lines  with prompt to choose destination file (default /data)
         # and rename file.
         currentChoicepath = self.grasplist[self.listWidget.currentRow()]
         currentChoicename = self.filename[self.listWidget.currentRow()]

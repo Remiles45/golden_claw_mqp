@@ -1,4 +1,5 @@
 import rospy
+import socket
 from python_qt_binding.QtWidgets import * #QWidget, QToolTip,QPushButton,QLabel,QGridLayout,QLineEdit
 from python_qt_binding.QtGui import * #QFont,QPalette, QColor
 
@@ -44,16 +45,18 @@ class CalibrationWidget(QWidget):
         self.hbox_cali_f3.addWidget(self.cali_f3_loosen_button)
 
         # Calibrate preshape row
-        self.cali_f4_label = QLabel("Calibrate preshape")
-        self.cali_f4_tight_button = QPushButton("Tightening preshape")
-        self.cali_f4_loosen_button = QPushButton("Loosensing preshape")
-        self.hbox_cali_f4 = QHBoxLayout()
-        self.hbox_cali_f4.addWidget(self.cali_f4_tight_button)
-        self.hbox_cali_f4.addWidget(self.cali_f4_loosen_button)
+        self.cali_k1_label = QLabel("Calibrate preshape")
+        self.cali_k1_tight_button = QPushButton("Tightening preshape")
+        self.cali_k1_loosen_button = QPushButton("Loosensing preshape")
+        self.hbox_cali_k1 = QHBoxLayout()
+        self.hbox_cali_k1.addWidget(self.cali_k1_tight_button)
+        self.hbox_cali_k1.addWidget(self.cali_k1_loosen_button)
 
-        # Auto Calibration
-        # self.cali_f5_label = QLabel("Auto-Calibration")
-        # self.cali_f5_button = QPushButton("Auto-Calibration")
+        # Calibrate Thumb rotation
+        self.cali_k2_label = QLabel("Calibrate Thumb")
+        self.cali_k2_button = QPushButton("Rotate Thumb")
+        self.hbox_cali_k2 = QHBoxLayout()
+        self.hbox_cali_k2.addWidget(self.cali_k2_button)
 
 ############ Adding rows and set up singal for button ####################################################
         #QFormLayout similar to HBox but you know it look like form, add everything to FormLayout
@@ -62,8 +65,8 @@ class CalibrationWidget(QWidget):
         self.fbox.addRow(self.cali_f1_label,self.hbox_cali_f1)
         self.fbox.addRow(self.cali_f2_label,self.hbox_cali_f2)
         self.fbox.addRow(self.cali_f3_label,self.hbox_cali_f3)
-        self.fbox.addRow(self.cali_f4_label,self.hbox_cali_f4)
-       # self.fbox.addRow(self.cali_f5_label,self.cali_f5_button)
+        self.fbox.addRow(self.cali_k1_label,self.hbox_cali_k1)
+        self.fbox.addRow(self.cali_k2_label,self.cali_k2_button)
 
         # Add connect signal to f1 tight and loosen button
         self.cali_f1_tight_button.clicked.connect(self.handle_cali_f1_tight)
@@ -78,10 +81,10 @@ class CalibrationWidget(QWidget):
         self.cali_f3_loosen_button.clicked.connect(self.handle_cali_f3_loosen)
 
         # Add connect signal to f1 tight and loosen button
-        self.cali_f4_tight_button.clicked.connect(self.handle_cali_f4_tight)
-        self.cali_f4_loosen_button.clicked.connect(self.handle_cali_f4_loosen)
+        self.cali_k1_tight_button.clicked.connect(self.handle_cali_k1_tight)
+        self.cali_k1_loosen_button.clicked.connect(self.handle_cali_k1_loosen)
 
-        # self.cali_f5_button.clicked.connect(self.handle_cali_f5)
+        self.cali_k2_button.clicked.connect(self.handle_cali_k2)#why only 1? its the thumb... but?
 
         # self.list_control_save_button.clicked.connect(self.handle_list_control_save_button)
         # self.list_control_delete_button.clicked.connect(self.handle_list_control_delete_button)
@@ -101,7 +104,10 @@ class CalibrationWidget(QWidget):
 ######## a, b when calling the function, so I have to make each handler for each button, need some refine
 ########## Tighten and Loosen for f1 ######################################################################
     def handle_cali_f1_tight(self):
-        rospy.wait_for_service('/send_two_int')
+        try:
+            rospy.wait_for_service('/send_two_int', timeout=2)
+        except:
+            print("\nERROR: Could not communicate with hand. Check cable connection")
         finger_sel = 1 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
         try:
@@ -112,7 +118,10 @@ class CalibrationWidget(QWidget):
             print "Service call failed: %s"%e
 
     def handle_cali_f1_loosen(self):
-        rospy.wait_for_service('/send_two_int')
+        try:
+            rospy.wait_for_service('/send_two_int', timeout=2)
+        except:
+            print("\nERROR: Could not communicate with hand. Check cable connection")
         finger_sel = 1 # 1 is motor f1
         b = 1 # 0 is tight, 1 is loosen
         try:
@@ -123,7 +132,11 @@ class CalibrationWidget(QWidget):
             print "Service call failed: %s"%e
 ########## Tighten and Loosen for f2 ######################################################################
     def handle_cali_f2_tight(self):
-        rospy.wait_for_service('/send_two_int')
+        try:
+            rospy.wait_for_service('/send_two_int', timeout=2)
+        except:
+            print("\nERROR: Could not communicate with hand. Check cable connection")
+
         finger_sel = 2 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
         try:
@@ -134,7 +147,11 @@ class CalibrationWidget(QWidget):
             print "Service call failed: %s"%e
 
     def handle_cali_f2_loosen(self):
-        rospy.wait_for_service('/send_two_int')
+        try:
+            rospy.wait_for_service('/send_two_int', timeout=2)
+        except:
+            print("\nERROR: Could not communicate with hand. Check cable connection")
+
         finger_sel = 2 # 1 is motor f1
         b = 1 # 0 is tight, 1 is loosen
         try:
@@ -146,7 +163,11 @@ class CalibrationWidget(QWidget):
 
 ########## Tighten and Loosen for f3 ######################################################################
     def handle_cali_f3_tight(self):
-        rospy.wait_for_service('/send_two_int')
+        try:
+            rospy.wait_for_service('/send_two_int', timeout=2)
+        except:
+            print("\nERROR: Could not communicate with hand. Check cable connection")
+
         finger_sel = 3 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
         try:
@@ -157,7 +178,11 @@ class CalibrationWidget(QWidget):
             print "Service call failed: %s"%e
 
     def handle_cali_f3_loosen(self):
-        rospy.wait_for_service('/send_two_int')
+        try:
+            rospy.wait_for_service('/send_two_int', timeout=2)
+        except:
+            print("\nERROR: Could not communicate with hand. Check cable connection")
+
         finger_sel = 3 # 1 is motor f1
         b = 1 # 0 is tight, 1 is loosen
         try:
@@ -167,10 +192,14 @@ class CalibrationWidget(QWidget):
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
 
-########## Tighten and Loosen for f4 ######################################################################
-###F4 is preshape? k1?
-    def handle_cali_f4_tight(self):
-        rospy.wait_for_service('/send_two_int')
+########## Tighten and Loosen for k1 ######################################################################
+###k1 is preshape? k1?
+    def handle_cali_k1_tight(self):
+        try:
+            rospy.wait_for_service('/send_two_int', timeout=2)
+        except:
+            print("\nERROR: Could not communicate with hand. Check cable connection")
+
         finger_sel = 4 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
         try:
@@ -180,8 +209,12 @@ class CalibrationWidget(QWidget):
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
 
-    def handle_cali_f4_loosen(self):
-        rospy.wait_for_service('/send_two_int')
+    def handle_cali_k1_loosen(self):
+        try:
+            rospy.wait_for_service('/send_two_int', timeout=2)
+        except:
+            print("\nERROR: Could not communicate with hand. Check cable connection")
+
         finger_sel = 4 # 1 is motor f1
         b = 1 # 0 is tight, 1 is loosen
         try:
@@ -191,7 +224,7 @@ class CalibrationWidget(QWidget):
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
 #############################################################################################################
-    def handle_cali_f5(self):
+    def handle_cali_k2(self):
         try:
             auto_calibrate = rospy.ServiceProxy('/reflex_sf/auto_calibrate', Empty)
             resp1 = auto_calibrate()
