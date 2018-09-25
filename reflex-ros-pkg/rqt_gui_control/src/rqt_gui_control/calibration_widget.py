@@ -135,7 +135,7 @@ class CalibrationWidget(QWidget):
 
 
 ########## Tighten and Loosen for k1 ######################################################################
-###k1 is preshape? k1?
+###TODO: figure out how to make preshape calibration work
     def handle_cali_k1_tight(self):
         finger_sel = 4 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
