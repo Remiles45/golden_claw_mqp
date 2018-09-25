@@ -299,26 +299,20 @@ class ManualHandControlWidget(QWidget):
     def handle_grasp_save_button(self):
         #TODO prompt to edit filename/path
         #replace next 4 lines with prompt to select save directory+ rename file
-        abspath = os.path.abspath(__file__)
-        folderdatapath = abspath[:-len('/src/rqt_gui_control/manual_cntrl_widget.py')] + '/data'
-        name = 'grasp'+str(len(self.filename))+'.txt'
-        filename = folderdatapath + '/' + name
-
+        filepath = QFileDialog.getSaveFileName(self, 'Save File', FILE_DIR)[0]
+        name = os.path.basename(filepath)
         #write waypoint list to file
         if len(self.listPose) > 0:
             print 'saved ' + str(len(self.listPose)) + ' waypoints to ' + name
-            count = 0
-            for point in self.listPose:
-                #add indicator for each chunk of data
-                data = "//" + str(point)
-                file = open(filename, "a")
-                file.write(data)
-                file.close()
+            with open(filepath, 'w') as file:
+                for point in self.listPose:
+                    #add indicator for each chunk of data
+                    data = "//" + str(point)
+                    file.write(data)
         else:
             print "No waypoints to save"
 
         self.filename.append(name)
-        self.grasplist.append(filename)
         item = QListWidgetItem(name)
         self.fileListWidget.addItem(item)
 
