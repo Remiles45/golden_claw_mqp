@@ -12,8 +12,16 @@ from reflex_msgs.msg import PoseCommand
 from reflex_msgs.msg import Hand
 import socket
 from std_msgs.msg import UInt16
+from os import listdir
+from os.path import isfile, join
+
+
+FILE_DIR = "data"
+
+
 
 class ManualHandControlWidget(QWidget):
+
 
     def __init__(self):
         super(ManualHandControlWidget, self).__init__()
@@ -75,7 +83,7 @@ class ManualHandControlWidget(QWidget):
         self.hbox_f3.addWidget(self.value_slider_3)
 #Preshape: slider range 0 -> 400
         #Preshape k1 (index/middle fingers)
-        self.finger_label_4 = QLabel("Distance between fingers 1 and 2 (Soft Hand F4)") #actually check that im not lying
+        self.finger_label_4 = QLabel("Distance between fingers 1 and 2") # actually check that im not lying
         self.finger_slider_4 = QSlider(1)
         self.finger_slider_4.setMinimum(0)
         self.finger_slider_4.setMaximum(400)
@@ -88,7 +96,7 @@ class ManualHandControlWidget(QWidget):
         self.hbox_f4.addWidget(self.value_slider_4)
 
         #Preshape k2
-        self.finger_label_5 = QLabel("Thumb Rotation (Soft Hand: N/A)")#acutally check this one is the thumb
+        self.finger_label_5 = QLabel("Thumb Rotation") # actually check this one is the thumb
         self.finger_slider_5 = QSlider(1)
         self.finger_slider_5.setMinimum(0)
         self.finger_slider_5.setMaximum(400)
@@ -136,7 +144,7 @@ class ManualHandControlWidget(QWidget):
         self.hbox_command.addWidget(self.go_button)
         self.hbox_command.addWidget(self.re_button)
         self.hbox_command.addWidget(self.home_button)
-########### Combo section ############################################################################
+########### Combo section############################################################################
         self.combo_label = QLabel("Targeted Device")
         self.combo = QComboBox(self)
         self.combo.addItem("ReflexSF")
@@ -173,11 +181,21 @@ class ManualHandControlWidget(QWidget):
         self.listPose.append(pose0)
         #Test List view
         self.listWidget = QListWidget()
+        self.fileListWidget = QListWidget()
 
         item = QListWidgetItem("Pos(  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  )" % (pose0.f1,pose0.f2,pose0.f3,pose0.k1,pose0.k2))
         self.listWidget.addItem(item)
+        self.populate_filelist()
 
+        self.fileslabel = QLabel("Grasp Files")
         self.listlabel = QLabel("List waypoint")
+
+        # Options for File List 
+        self.file_control = QHBoxLayout()
+        self.file_load_button = QPushButton("Load File into List Waypoint WIP")
+        self.file_execute_button = QPushButton("Execute File")
+        self.file_control.addWidget(self.file_load_button)
+        self.file_control.addWidget(self.file_execute_button)
 
         #List Control
         self.list_control_label = QLabel("Waypoint Control")
@@ -185,13 +203,11 @@ class ManualHandControlWidget(QWidget):
         self.list_control_delete_button = QPushButton("Remove Waypoint")
         self.list_control_execute_waypoints = QPushButton("Execute Waypoints")#TODO does not seem to send messages
         self.list_control_save_grasp = QPushButton("Save Grasp")
-        self.list_control_execute_existing_grasp = QPushButton("Execute Grasp File")
         self.list_control = QHBoxLayout()
         self.list_control.addWidget(self.list_control_save_button)
         self.list_control.addWidget(self.list_control_delete_button)
         self.list_control.addWidget(self.list_control_execute_waypoints)
         self.list_control.addWidget(self.list_control_save_grasp)
-        self.list_control.addWidget(self.list_control_execute_existing_grasp)
 ############ Adding rows and set up singal for button ####################################################
         #QFormLayout similar to HBox but you know it look like form, add everything to FormLayout
         self.fbox = QFormLayout()
@@ -202,12 +218,14 @@ class ManualHandControlWidget(QWidget):
         self.fbox.addRow(self.finger_label_5,self.hbox_f5)
         self.fbox.addRow(self.coupling_label,self.hbox_tick)
         self.fbox.addRow(self.command_label,self.hbox_command)
-        self.fbox.addRow(self.listlabel,self.listWidget)
+        self.fbox.addRow(self.listlabel, self.listWidget)
         self.fbox.addRow(self.list_control_label,self.list_control)
+        self.fbox.addRow(self.fileslabel, self.fileListWidget)
+        self.fbox.addRow(QLabel(""), self.file_control)
         self.fbox.addRow(self.combo_label,self.combo)
         self.fbox.addRow(self.glove_label,self.hbox_glove)
 
-        # Connect singal when slider change to function respectively to change value of label
+        # Connect signal when slider change to function respectively to change value of label
         self.finger_slider_1.valueChanged.connect(self.valuechange1)
         self.finger_slider_2.valueChanged.connect(self.valuechange2)
         self.finger_slider_3.valueChanged.connect(self.valuechange3)
@@ -217,12 +235,14 @@ class ManualHandControlWidget(QWidget):
         self.go_button.clicked.connect(self.handleButtonGo)
         self.home_button.clicked.connect(self.handleButtonHome)
         self.re_button.clicked.connect(self.handleButtonReset)
+        #Add connect signal when combo box changes
+        self.combo.currentIndexChanged.connect(self.handleHandSelectChange)
 
         self.list_control_save_button.clicked.connect(self.handle_list_control_save_button)
         self.list_control_delete_button.clicked.connect(self.handle_list_control_delete_button)
         self.list_control_execute_waypoints.clicked.connect(self.handle_execute_waypoints)
         self.list_control_save_grasp.clicked.connect(self.handle_grasp_save_button)
-        self.list_control_execute_existing_grasp.clicked.connect(self.handle_run_existing_grasp_button)
+        self.file_execute_button.clicked.connect(self.handle_run_existing_grasp_button)
 ######### Set up window ###################################################################################
         #Set the widget to layout and show the widget
         self.setLayout(self.fbox)
@@ -248,7 +268,7 @@ class ManualHandControlWidget(QWidget):
 
     def handle_list_control_delete_button(self):
         #TODO remove the item from the displayed list
-        #i.e. have the window be just the list of waypoints
+        #i.e. have the window be just the list1 of waypoints
 
         if (self.listPose != []):
             dummy = self.listPose.pop(self.listWidget.currentRow())
@@ -265,8 +285,6 @@ class ManualHandControlWidget(QWidget):
         scaled_float_1 = 1.0
         scaled_float_2 = 1.0
         scaled_float_3 = 1.0
-
-
         if (self.tick_glove_state == 1):
             self.value_glove_1.setText("%2.2f" % scaled_float_1)
             self.value_glove_2.setText("%2.2f" % scaled_float_2)
@@ -281,28 +299,22 @@ class ManualHandControlWidget(QWidget):
     def handle_grasp_save_button(self):
         #TODO prompt to edit filename/path
         #replace next 4 lines with prompt to select save directory+ rename file
-        abspath = os.path.abspath(__file__)
-        folderdatapath = abspath[:-len('/src/rqt_gui_control/manual_cntrl_widget.py')] + '/data'
-        name = 'grasp'+str(len(self.filename))+'.txt'
-        filename = folderdatapath + '/' + name
-
+        filepath = QFileDialog.getSaveFileName(self, 'Save File', FILE_DIR)[0]
+        name = os.path.basename(filepath)
         #write waypoint list to file
         if len(self.listPose) > 0:
             print 'saved ' + str(len(self.listPose)) + ' waypoints to ' + name
-            count = 0
-            for point in self.listPose:
-                #add indicator for each chunk of data
-                data = "//" + str(point)
-                file = open(filename, "a")
-                file.write(data)
-                file.close()
+            with open(filepath, 'w') as file:
+                for point in self.listPose:
+                    #add indicator for each chunk of data
+                    data = "//" + str(point)
+                    file.write(data)
         else:
             print "No waypoints to save"
 
         self.filename.append(name)
-        self.grasplist.append(filename)
         item = QListWidgetItem(name)
-        self.listWidget.addItem(item)
+        self.fileListWidget.addItem(item)
 
 
     def handle_run_existing_grasp_button(self):
@@ -311,11 +323,13 @@ class ManualHandControlWidget(QWidget):
         #     and have it execute from there
 
         #replace next 4 lines  with prompt to choose destination file (default /data)
-        # and rename file.
-        currentChoicepath = self.grasplist[self.listWidget.currentRow()]
-        currentChoicename = self.filename[self.listWidget.currentRow()]
-        print("Execute grasp: " + currentChoicename)
-        file = open(currentChoicepath,'r').read()
+        # and rename file.handle
+        file_name = self.fileListWidget.currentItem().text()
+        # currentChoicepath = self.grasplist[self.listWidget.currentRow()]
+        # currentChoicename = self.filename[self.listWidget.currentRow()]
+        # print("Execute grasp: " + currentChoicename)
+        file_path = "{}/{}".format(FILE_DIR, file_name)
+        file = open(file_path,'r').read()
 
         #Divide file by pose commands
         data_chunks = file.split('//')
@@ -379,7 +393,7 @@ class ManualHandControlWidget(QWidget):
         float_value = float(self.finger_slider_5.value())/100.0 - 2.0
         self.value_slider_5.setText("%2.2f" % float_value)
 
-#############################################################################################################
+#########################################1####################################################################
     def tickchange(self,b):
         if b.text() == "F1":
             if b.isChecked() == True:
@@ -429,6 +443,21 @@ class ManualHandControlWidget(QWidget):
             print(tar_f1,tar_f2,tar_f3,tar_k1)
             self.softHand_pose(f1=tar_f1,f2=tar_f2,f3=tar_f3,f4=tar_k1)
 
+    def handleHandSelectChange(self):
+        """Change the UI labels accordingly with the selected robot hand.
+
+        """
+        if self.combo.currentText() == "ReflexSF":
+            self.finger_label_4.setText("Distance between fingers 1 and 2")
+            self.finger_label_5.setText("Thumb Rotation")
+            self.finger_label_5.setHidden(False)
+            self.finger_slider_5.setHidden(False)
+            self.value_slider_5.setHidden(False)
+        elif self.combo.currentText() == "Soft Hand":
+            self.finger_label_4.setText("Goal for F4")
+            self.finger_label_5.setHidden(True)
+            self.finger_slider_5.setHidden(True)
+            self.value_slider_5.setHidden(True)
 
     def handleButtonHome(self):
         #send the fingers to home positions
@@ -500,3 +529,11 @@ class ManualHandControlWidget(QWidget):
                 self.command_pub.publish(poseTarget)
             elif self.combo.currentText() == "Soft Hand":
                 self.softHand_pose(f1=tar_f1,f2=tar_f2,f3=tar_f3,f4=tar_f4)
+
+
+########### Load File   ############################################################################
+    def populate_filelist(self):
+        all_files = [f for f in listdir(FILE_DIR) if isfile(join(FILE_DIR, f))]
+        for f in all_files:
+            self.fileListWidget.addItem(QListWidgetItem(f))
+            self.filename.append(f)
