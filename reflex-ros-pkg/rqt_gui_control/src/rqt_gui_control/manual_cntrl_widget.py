@@ -8,7 +8,7 @@ from std_msgs.msg import String
 from std_msgs.msg import Int16MultiArray
 
 from reflex_msgs.msg import PoseCommand
-from rqt_service.srv import SendTwoInt
+# from rqt_service.srv import SendTwoInt
 from reflex_msgs.msg import Hand
 import socket
 

@@ -7,18 +7,14 @@ from std_msgs.msg import String
 from reflex_msgs.msg import PoseCommand
 from std_srvs.srv import Empty
 from rqt_service.srv import SendTwoInt
+global calibrate_hand
 class CalibrationWidget(QWidget):
-
     def __init__(self):
         super(CalibrationWidget, self).__init__()
-        #self.command_pub = rospy.Publisher('/reflex_sf/command_position', PoseCommand, queue_size=1)
-        #rospy.init_node('listener', anonymous=True)
 
         self.initUI()
 
     def initUI(self):
-
-
 ########### Calibrate section ############################################################################
         # Calibrate f1 row
         self.cali_f1_label = QLabel("Calibrate f1")
@@ -94,7 +90,7 @@ class CalibrationWidget(QWidget):
         #Set the widget to layout and show the widget
         self.setLayout(self.fbox)
 
-        self.setWindowTitle("Test QT Layout")
+        self.setWindowTitle("Calibration")
         self.resize(640,480)
         self.dumbnum = 0
         self.show()
@@ -103,126 +99,53 @@ class CalibrationWidget(QWidget):
 ######## These handler function does not let me have any other input !!!!!!!!!!!! so i cant change
 ######## a, b when calling the function, so I have to make each handler for each button, need some refine
 ########## Tighten and Loosen for f1 ######################################################################
+
     def handle_cali_f1_tight(self):
-        try:
-            rospy.wait_for_service('/send_two_int', timeout=2)
-        except:
-            print("\nERROR: Could not communicate with hand. Check cable connection")
         finger_sel = 1 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
-        try:
-            send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
-            resp1 = send_two_int(finger_sel, b)
-            print resp1
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+        calibrate_hand(self, finger_sel, b)
 
     def handle_cali_f1_loosen(self):
-        try:
-            rospy.wait_for_service('/send_two_int', timeout=2)
-        except:
-            print("\nERROR: Could not communicate with hand. Check cable connection")
         finger_sel = 1 # 1 is motor f1
         b = 1 # 0 is tight, 1 is loosen
-        try:
-            send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
-            resp1 = send_two_int(finger_sel, b)
-            print resp1
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+        calibrate_hand(self, finger_sel, b)
+
 ########## Tighten and Loosen for f2 ######################################################################
     def handle_cali_f2_tight(self):
-        try:
-            rospy.wait_for_service('/send_two_int', timeout=2)
-        except:
-            print("\nERROR: Could not communicate with hand. Check cable connection")
-
         finger_sel = 2 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
-        try:
-            send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
-            resp1 = send_two_int(finger_sel, b)
-            print resp1
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+        calibrate_hand(self, finger_sel, b)
+
 
     def handle_cali_f2_loosen(self):
-        try:
-            rospy.wait_for_service('/send_two_int', timeout=2)
-        except:
-            print("\nERROR: Could not communicate with hand. Check cable connection")
-
         finger_sel = 2 # 1 is motor f1
         b = 1 # 0 is tight, 1 is loosen
-        try:
-            send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
-            resp1 = send_two_int(finger_sel, b)
-            print resp1
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+        calibrate_hand(self, finger_sel, b)
 
 ########## Tighten and Loosen for f3 ######################################################################
     def handle_cali_f3_tight(self):
-        try:
-            rospy.wait_for_service('/send_two_int', timeout=2)
-        except:
-            print("\nERROR: Could not communicate with hand. Check cable connection")
-
         finger_sel = 3 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
-        try:
-            send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
-            resp1 = send_two_int(finger_sel, b)
-            print resp1
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+        calibrate_hand(self, finger_sel, b)
 
     def handle_cali_f3_loosen(self):
-        try:
-            rospy.wait_for_service('/send_two_int', timeout=2)
-        except:
-            print("\nERROR: Could not communicate with hand. Check cable connection")
-
         finger_sel = 3 # 1 is motor f1
         b = 1 # 0 is tight, 1 is loosen
-        try:
-            send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
-            resp1 = send_two_int(finger_sel, b)
-            print resp1
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+        calibrate_hand(self, finger_sel, b)
+
 
 ########## Tighten and Loosen for k1 ######################################################################
 ###k1 is preshape? k1?
     def handle_cali_k1_tight(self):
-        try:
-            rospy.wait_for_service('/send_two_int', timeout=2)
-        except:
-            print("\nERROR: Could not communicate with hand. Check cable connection")
-
         finger_sel = 4 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
-        try:
-            send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
-            resp1 = send_two_int(finger_sel, b)
-            print resp1
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+        calibrate_hand(self, finger_sel, b)
 
     def handle_cali_k1_loosen(self):
-        try:
-            rospy.wait_for_service('/send_two_int', timeout=2)
-        except:
-            print("\nERROR: Could not communicate with hand. Check cable connection")
-
         finger_sel = 4 # 1 is motor f1
         b = 1 # 0 is tight, 1 is loosen
-        try:
-            send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
-            resp1 = send_two_int(finger_sel, b)
-            print resp1
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+        calibrate_hand(self, finger_sel, b)
+
 #############################################################################################################
     def handle_cali_k2(self):
         try:
@@ -231,3 +154,14 @@ class CalibrationWidget(QWidget):
             print resp1
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
+
+
+def calibrate_hand(self, finger_sel, loosen):
+    try:
+        rospy.wait_for_service('/send_two_int', timeout=2)
+        send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
+        resp1 = send_two_int(finger_sel, loosen)
+        print resp1
+
+    except Exception:
+        print("\nERROR: Could not communicate with hand. Check cable connection")
