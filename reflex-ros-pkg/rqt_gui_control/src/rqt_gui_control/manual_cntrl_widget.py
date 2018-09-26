@@ -303,7 +303,7 @@ class ManualHandControlWidget(QWidget):
                 if self.combo.currentText() == "ReflexSF":
                     self.command_pub.publish(pose)
                 elif self.combo.currentText() == "Soft Hand":
-                    self.softHand_pose(f1=pose.f1,f2=pose.f2,f3=pose.f3,f4=pose.k1)
+                    self.softHand_pose(f1=pose.f1*50,f2=pose.f2*50,f3=pose.f3*50,f4=pose.k1*50)
                 #give time for message to publish before sending next
                 rospy.sleep(0.2)
 
@@ -352,7 +352,7 @@ class ManualHandControlWidget(QWidget):
                         poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=tar_k2)
                         self.command_pub.publish(poseTarget)
                     elif self.combo.currentText() == "Soft Hand":
-                        self.softHand_pose(f1=tar_f1*25,f2=tar_f2*25,f3=tar_f3*25,f4=tar_k1*25)
+                        self.softHand_pose(f1=tar_f1*50,f2=tar_f2*50,f3=tar_f3*50,f4=tar_k1*50)
                     rospy.sleep(0.2)
         except Exception:
             print "ERROR: could not load file--invalid file format"
@@ -443,10 +443,10 @@ class ManualHandControlWidget(QWidget):
             poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=tar_k2)
             self.command_pub.publish(poseTarget)
         elif self.combo.currentText() == "Soft Hand":
-            sh_f1 = int(tar_f1*25)
-            sh_f2 = int(tar_f2*25)
-            sh_f3 = int(tar_f3*25)
-            sh_f4 = int(tar_k1*25)
+            sh_f1 = int(tar_f1*50)
+            sh_f2 = int(tar_f2*50)
+            sh_f3 = int(tar_f3*50)
+            sh_f4 = int(tar_k1*50)
             print "Sending Hand to: \n"
             print(tar_f1,tar_f2,tar_f3,tar_k1)
             self.softHand_pose(f1=sh_f1,f2=sh_f2,f3=sh_f3,f4=sh_f4)
