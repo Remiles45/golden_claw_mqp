@@ -4,11 +4,12 @@ Custom GUI using rqt to control Reflex Hand
 
 How to run
 ------
-Run roscore before, also have __init__.py under the src folder.
+Ensure __init__.py is under the src folder
+Run roscore if not currently using the hand, if the hand is plugged in, run:
 
-Go to rqt_gui_control:
+	roslaunch reflex reflex_sf.launch
 
-	roscd rqt_gui_control
+
 
 Run the rqt standalone command for rqt_gui_control plugin:
 	
