@@ -16,9 +16,8 @@ from os import listdir
 from os.path import isfile, join
 
 
-FILE_DIR = "data"
-
-
+abspath = os.path.abspath(__file__)
+FILE_DIR = abspath[:-len('/src/rqt_gui_control/manual_cntrl_widget.py')] + '/data'
 
 class ManualHandControlWidget(QWidget):
 
@@ -539,6 +538,7 @@ class ManualHandControlWidget(QWidget):
 
 ########### Load File   ############################################################################
     def populate_filelist(self):
+
         all_files = [f for f in listdir(FILE_DIR) if isfile(join(FILE_DIR, f))]
         for f in all_files:
             self.fileListWidget.addItem(QListWidgetItem(f))
