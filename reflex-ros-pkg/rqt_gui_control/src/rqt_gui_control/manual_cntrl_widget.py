@@ -112,11 +112,14 @@ class ManualHandControlWidget(QWidget):
         self.tick_f1 = QCheckBox("F1")
         self.tick_f2 = QCheckBox("F2")
         self.tick_f3 = QCheckBox("F3")
+        self.tick_f4 = QCheckBox("F4")
+        self.tick_f4.setHidden(True)
         # self.tick_f4 = QCheckBox("Preshape")
 
         self.hbox_tick.addWidget(self.tick_f1)
         self.hbox_tick.addWidget(self.tick_f2)
         self.hbox_tick.addWidget(self.tick_f3)
+        self.hbox_tick.addWidget(self.tick_f4)
         # self.hbox_tick.addWidget(self.tick_f4)
         self.hbox_tick.addStretch()
 
@@ -127,6 +130,7 @@ class ManualHandControlWidget(QWidget):
         self.tick_f1.stateChanged.connect(lambda:self.tickchange(self.tick_f1))
         self.tick_f2.stateChanged.connect(lambda:self.tickchange(self.tick_f2))
         self.tick_f3.stateChanged.connect(lambda:self.tickchange(self.tick_f3))
+        self.tick_f4.stateChanged.connect(lambda:self.tickchange(self.tick_f4))
         ######is this actually controlling the hand? or JUST coupling
         # self.tick_f4.stateChanged.connect(lambda:self.tickchange(self.tick_f4))
 
@@ -162,11 +166,15 @@ class ManualHandControlWidget(QWidget):
         self.value_glove_3 = QLabel("x")
         self.value_glove_3.setMaximumSize(80,20)
 
+        self.value_glove_4 = QLabel("x")
+        self.value_glove_4.setMaximumSize(80,20)
+
         self.hbox_glove = QHBoxLayout()
         self.hbox_glove.addWidget(self.tick_glove)
         self.hbox_glove.addWidget(self.value_glove_1)
         self.hbox_glove.addWidget(self.value_glove_2)
         self.hbox_glove.addWidget(self.value_glove_3)
+        self.hbox_glove.addWidget(self.value_glove_4)
 
 ##########################################################################################################
         self.listPose = []
@@ -369,7 +377,9 @@ class ManualHandControlWidget(QWidget):
             if self.tick_f3_state:
                 self.value_slider_3.setText("%2.2f" % float_value)
                 self.finger_slider_3.setValue(self.finger_slider_1.value())
-
+            if self.tick_f4_state and self.tick_f4.isVisible():
+                self.value_slider_4.setText("%2.2f" % float_value)
+                self.finger_slider_4.setValue(self.finger_slider_1.value())
 
     def valuechange2(self):
         float_value = float(self.finger_slider_2.value())/100.0
@@ -381,6 +391,9 @@ class ManualHandControlWidget(QWidget):
             if self.tick_f3_state:
                 self.value_slider_3.setText("%2.2f" % float_value)
                 self.finger_slider_3.setValue(self.finger_slider_2.value())
+            if self.tick_f4_state and self.tick_f4.isVisible():
+                self.value_slider_4.setText("%2.2f" % float_value)
+                self.finger_slider_4.setValue(self.finger_slider_2.value())
 
 
     def valuechange3(self):
@@ -393,11 +406,25 @@ class ManualHandControlWidget(QWidget):
             if self.tick_f2_state:
                 self.value_slider_2.setText("%2.2f" % float_value)
                 self.finger_slider_2.setValue(self.finger_slider_3.value())
+            if self.tick_f4_state and self.tick_f4.isVisible():
+                self.value_slider_4.setText("%2.2f" % float_value)
+                self.finger_slider_4.setValue(self.finger_slider_3.value())
 
-#Update preshape slider values
     def valuechange4(self):
+        """This should only work for the softhand
+        """
         float_value = float(self.finger_slider_4.value())/100.0
         self.value_slider_4.setText("%2.2f" % float_value)
+        if self.tick_f4_state and self.tick_f4.isVisible():
+            if self.tick_f1_state:
+                self.value_slider_1.setText("%2.2f" % float_value)
+                self.finger_slider_1.setValue(self.finger_slider_4.value())
+            if self.tick_f2_state:
+                self.value_slider_2.setText("%2.2f" % float_value)
+                self.finger_slider_2.setValue(self.finger_slider_4.value())
+            if self.tick_f3_state:
+                self.value_slider_3.setText("%2.2f" % float_value)
+                self.finger_slider_3.setValue(self.finger_slider_4.value())
 
     def valuechange5(self):
         float_value = float(self.finger_slider_5.value())/100.0 - 2.0
@@ -406,20 +433,25 @@ class ManualHandControlWidget(QWidget):
 #########################################1####################################################################
     def tickchange(self,b):
         if b.text() == "F1":
-            if b.isChecked() == True:
+            if b.isChecked():
                 self.tick_f1_state = 1
             else:
                 self.tick_f1_state = 0
         if b.text() == "F2":
-            if b.isChecked() == True:
+            if b.isChecked():
                 self.tick_f2_state = 1
             else:
                 self.tick_f2_state = 0
         if b.text() == "F3":
-            if b.isChecked() == True:
+            if b.isChecked():
                 self.tick_f3_state = 1
             else:
                 self.tick_f3_state = 0
+        if b.text() == "F4":
+            if b.isChecked():
+                self.tick_f4_state = 1
+            else:
+                self.tick_f4_state = 0
         if b.text() == "ON/OFF":
             if b.isChecked() == True:
                 self.tick_glove_state = 1
@@ -458,11 +490,13 @@ class ManualHandControlWidget(QWidget):
         if self.combo.currentText() == "ReflexSF":
             self.finger_label_4.setText("Distance between fingers 1 and 2")
             self.finger_label_5.setText("Thumb Rotation")
+            self.tick_f4.setHidden(True)
             self.finger_label_5.setHidden(False)
             self.finger_slider_5.setHidden(False)
             self.value_slider_5.setHidden(False)
         elif self.combo.currentText() == "Soft Hand":
             self.finger_label_4.setText("Goal for F4")
+            self.tick_f4.setHidden(False)
             self.finger_label_5.setHidden(True)
             self.finger_slider_5.setHidden(True)
             self.value_slider_5.setHidden(True)
