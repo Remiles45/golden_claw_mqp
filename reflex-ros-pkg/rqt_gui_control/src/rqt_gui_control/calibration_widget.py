@@ -7,6 +7,7 @@ from std_msgs.msg import String
 from reflex_msgs.msg import PoseCommand
 from std_srvs.srv import Empty
 from rqt_service.srv import SendTwoInt
+
 global calibrate_hand
 class CalibrationWidget(QWidget):
     def __init__(self):
@@ -42,17 +43,21 @@ class CalibrationWidget(QWidget):
 
         # Calibrate preshape row
         self.cali_k1_label = QLabel("Calibrate preshape")
-        self.cali_k1_tight_button = QPushButton("Tightening preshape")
-        self.cali_k1_loosen_button = QPushButton("Loosensing preshape")
+        self.cali_k1_tight_button = QPushButton("Separate Fingers")
+        self.cali_k1_loosen_button = QPushButton("Bring Fingers Together")
         self.hbox_cali_k1 = QHBoxLayout()
         self.hbox_cali_k1.addWidget(self.cali_k1_tight_button)
         self.hbox_cali_k1.addWidget(self.cali_k1_loosen_button)
 
         # Calibrate Thumb rotation
+        # Calibrate preshape row
         self.cali_k2_label = QLabel("Calibrate Thumb")
-        self.cali_k2_button = QPushButton("Rotate Thumb")
+        self.cali_k2_clock_button = QPushButton("Rotate Clockwise")
+        self.cali_k2_counterclock_button = QPushButton("Rotate Counterclockwise")
         self.hbox_cali_k2 = QHBoxLayout()
-        self.hbox_cali_k2.addWidget(self.cali_k2_button)
+        self.hbox_cali_k2.addWidget(self.cali_k2_clock_button)
+        self.hbox_cali_k2.addWidget(self.cali_k2_counterclock_button)
+
 
 ############ Adding rows and set up singal for button ####################################################
         #QFormLayout similar to HBox but you know it look like form, add everything to FormLayout
@@ -62,7 +67,7 @@ class CalibrationWidget(QWidget):
         self.fbox.addRow(self.cali_f2_label,self.hbox_cali_f2)
         self.fbox.addRow(self.cali_f3_label,self.hbox_cali_f3)
         self.fbox.addRow(self.cali_k1_label,self.hbox_cali_k1)
-        self.fbox.addRow(self.cali_k2_label,self.cali_k2_button)
+        self.fbox.addRow(self.cali_k2_label,self.hbox_cali_k2)
 
         # Add connect signal to f1 tight and loosen button
         self.cali_f1_tight_button.clicked.connect(self.handle_cali_f1_tight)
@@ -80,8 +85,8 @@ class CalibrationWidget(QWidget):
         self.cali_k1_tight_button.clicked.connect(self.handle_cali_k1_tight)
         self.cali_k1_loosen_button.clicked.connect(self.handle_cali_k1_loosen)
 
-        self.cali_k2_button.clicked.connect(self.handle_cali_k2)#why only 1? its the thumb... but?
-
+        self.cali_k2_clock_button.clicked.connect(self.handle_cali_k2_clock)
+        self.cali_k2_counterclock_button.clicked.connect(self.handle_cali_k2_counterclock)
         # self.list_control_save_button.clicked.connect(self.handle_list_control_save_button)
         # self.list_control_delete_button.clicked.connect(self.handle_list_control_delete_button)
         # self.list_control_go_button.clicked.connect(self.handle_list_control_go_button)
@@ -147,7 +152,11 @@ class CalibrationWidget(QWidget):
         calibrate_hand(self, finger_sel, b)
 
 #############################################################################################################
-    def handle_cali_k2(self):
+    def handle_cali_k2_clock(self):
+        finger_sel = 5 # 1 is motor f1
+        b = 0 # 0 is tight, 1 is loosen
+        calibrate_hand(self, finger_sel, b)
+    def handle_cali_k2_counterclock(self):
         finger_sel = 5 # 1 is motor f1
         b = 1 # 0 is tight, 1 is loosen
         calibrate_hand(self, finger_sel, b)

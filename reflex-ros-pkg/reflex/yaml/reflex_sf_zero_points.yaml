@@ -1,5 +1,5 @@
-reflex_sf_f1: {zero_point: 3.2111331159739422}
-reflex_sf_f2: {zero_point: 5.031456984264904}
-reflex_sf_f3: {zero_point: 4.791133327496153}
-reflex_sf_k1: {zero_point: 3.7735927381986776}
-reflex_sf_k2: {zero_point: 1.1555988602071832}
+reflex_sf_f1: {zero_point: 2.929903304861575}
+reflex_sf_f2: {zero_point: 2.1373465644539933}
+reflex_sf_f3: {zero_point: 4.9394181369917645}
+reflex_sf_k1: {zero_point: 4.601942363656923}
+reflex_sf_k2: {zero_point: 2.6589000323351115}

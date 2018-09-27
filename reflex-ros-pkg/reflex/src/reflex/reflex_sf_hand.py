@@ -139,13 +139,22 @@ motor, or 'q' to indicate that the zero point has been reached\n")
             self.motors[self.namespace + '_f3']._set_local_motor_zero_point()
         if (data.a == 4):
             if (data.b == 0):
-                print "Tightening motor _preshape"
-                self.motors[self.namespace + '_preshape'].tighten(0.35 * command - 0.3)
+                print "Separating Fingers"
+                self.motors[self.namespace + '_k1'].tighten(0.35 * command - 0.3)
             else:
-                print "Loosening motor _preshape"
-                self.motors[self.namespace + '_preshape'].loosen(0.35 * command - 0.3)
+                print "Bringing Fingers together"
+                self.motors[self.namespace + '_k1'].loosen(0.35 * command - 0.3)
 
-            self.motors[self.namespace + '_preshape']._set_local_motor_zero_point()
+            self.motors[self.namespace + '_k1']._set_local_motor_zero_point()
+        if (data.a == 5):
+            if (data.b == 0):
+                print "Turning thumb clockwise"
+                self.motors[self.namespace + '_k2'].tighten(0.35 * command - 0.3)
+            else:
+                print "Turning thumb counterclockwise"
+                self.motors[self.namespace + '_k2'].loosen(0.35 * command - 0.3)
+
+            self.motors[self.namespace + '_k2']._set_local_motor_zero_point()
 
         print "Calibration complete, writing data to file"
         self._zero_current_pose()
