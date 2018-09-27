@@ -427,7 +427,7 @@ class ManualHandControlWidget(QWidget):
                 self.finger_slider_3.setValue(self.finger_slider_4.value())
 
     def valuechange5(self):
-        float_value = float(self.finger_slider_5.value())/100.0 - 2.0
+        float_value = float(self.finger_slider_5.value())/100.0 #- 2.0
         self.value_slider_5.setText("%2.2f" % float_value)
 
 #########################################1####################################################################

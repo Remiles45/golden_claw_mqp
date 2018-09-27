@@ -148,20 +148,25 @@ class CalibrationWidget(QWidget):
 
 #############################################################################################################
     def handle_cali_k2(self):
-        try:
-            auto_calibrate = rospy.ServiceProxy('/reflex_sf/auto_calibrate', Empty)
-            resp1 = auto_calibrate()
-            print resp1
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+        finger_sel = 5 # 1 is motor f1
+        b = 1 # 0 is tight, 1 is loosen
+        calibrate_hand(self, finger_sel, b)
 
+        # try:
+        #     auto_calibrate = rospy.ServiceProxy('/reflex_sf/auto_calibrate', Empty)
+        #     # resp1 = auto_calibrate()
+        #     # print resp1
+        #
+        # except rospy.ServiceException, e:
+        #     print "Service call failed: %s"%e
+        #
 
 def calibrate_hand(self, finger_sel, loosen):
     try:
         rospy.wait_for_service('/send_two_int', timeout=2)
         send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
         resp1 = send_two_int(finger_sel, loosen)
-        print resp1
+        # print resp1
 
     except Exception:
         print("\nERROR: Could not communicate with hand. Check cable connection")
