@@ -87,9 +87,6 @@ class CalibrationWidget(QWidget):
 
         self.cali_k2_clock_button.clicked.connect(self.handle_cali_k2_clock)
         self.cali_k2_counterclock_button.clicked.connect(self.handle_cali_k2_counterclock)
-        # self.list_control_save_button.clicked.connect(self.handle_list_control_save_button)
-        # self.list_control_delete_button.clicked.connect(self.handle_list_control_delete_button)
-        # self.list_control_go_button.clicked.connect(self.handle_list_control_go_button)
 
 ######### Set up window ###################################################################################
         #Set the widget to layout and show the widget
@@ -101,8 +98,6 @@ class CalibrationWidget(QWidget):
         self.show()
 
 ########## Tighten and Loosen Button Function for all four motor ##########################################
-######## These handler function does not let me have any other input !!!!!!!!!!!! so i cant change
-######## a, b when calling the function, so I have to make each handler for each button, need some refine
 ########## Tighten and Loosen for f1 ######################################################################
 
     def handle_cali_f1_tight(self):
@@ -161,14 +156,7 @@ class CalibrationWidget(QWidget):
         b = 1 # 0 is tight, 1 is loosen
         calibrate_hand(self, finger_sel, b)
 
-        # try:
-        #     auto_calibrate = rospy.ServiceProxy('/reflex_sf/auto_calibrate', Empty)
-        #     # resp1 = auto_calibrate()
-        #     # print resp1
-        #
-        # except rospy.ServiceException, e:
-        #     print "Service call failed: %s"%e
-        #
+
 
 def calibrate_hand(self, finger_sel, loosen):
     try:

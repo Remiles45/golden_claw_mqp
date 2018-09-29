@@ -94,8 +94,8 @@ class ManualHandControlWidget(QWidget):
         #Preshape k2
         self.finger_label_5 = QLabel("Thumb Rotation") # actually check this one is the thumb
         self.finger_slider_5 = QSlider(1)
-        self.finger_slider_5.setMinimum(0)
-        self.finger_slider_5.setMaximum(200)
+        self.finger_slider_5.setMinimum(-100)
+        self.finger_slider_5.setMaximum(100)
         self.finger_slider_5.setValue(0)
 
         self.value_slider_5 = QTextEdit("0.00")
@@ -114,7 +114,6 @@ class ManualHandControlWidget(QWidget):
         self.tick_f3 = QCheckBox("F3")
         self.tick_f4 = QCheckBox("F4")
         self.tick_f4.setHidden(True)
-        # self.tick_f4 = QCheckBox("Preshape")
 
         self.hbox_tick.addWidget(self.tick_f1)
         self.hbox_tick.addWidget(self.tick_f2)
@@ -138,7 +137,7 @@ class ManualHandControlWidget(QWidget):
         self.command_label = QLabel("Manual Command Hand")
         self.go_button = QPushButton("Go to set values")
         self.re_button = QPushButton("Reset Goal Values")
-        self.home_button = QPushButton("Reset Finger Positions")
+        self.home_button = QPushButton("Finger Home")
 
         self.hbox_command = QHBoxLayout()
         self.hbox_command.addWidget(self.go_button)
@@ -205,7 +204,7 @@ class ManualHandControlWidget(QWidget):
         self.list_control_label = QLabel("Waypoint Control")
         self.list_control_save_button = QPushButton("Add Waypoint")
         self.list_control_delete_button = QPushButton("Remove Waypoint")
-        self.list_control_execute_waypoints = QPushButton("Execute Waypoints")#TODO does not seem to send messages
+        self.list_control_execute_waypoints = QPushButton("Execute Waypoints")
         self.list_control_save_grasp = QPushButton("Save Grasp")
         self.list_control = QHBoxLayout()
         self.list_control.addWidget(self.list_control_save_button)
@@ -266,11 +265,11 @@ class ManualHandControlWidget(QWidget):
         float_value_5 = float(self.value_slider_5.toPlainText())
 
         # if self.combo.currentText() == "ReflexSF":
-        pose0 = PoseCommand(f1=float_value_1,f2=float_value_2,f3=float_value_3,k1=float_value_4,k2=float_value_5)
+        pose0 = PoseCommand(f1=float_value_1,f2=float_value_2,f3=float_value_3,k1=float_value_4,k2=1+float_value_5)
         # elif self.combo.currentText() == "Soft Hand":
             # pose0 =
         self.listPose.append(pose0)
-        item = QListWidgetItem("Pos(  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  )" % (pose0.f1, pose0.f2, pose0.f3, pose0.k1, pose0.k2))
+        item = QListWidgetItem("[  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  )" % (pose0.f1, pose0.f2, pose0.f3, pose0.k1, pose0.k2-1))
         self.listWidget.addItem(item)
 
     def handle_list_control_delete_button(self):
@@ -307,7 +306,6 @@ class ManualHandControlWidget(QWidget):
             file.close()
         else:
             for pose in self.listPose:
-
                 if self.combo.currentText() == "ReflexSF":
                     self.command_pub.publish(pose)
                 elif self.combo.currentText() == "Soft Hand":
@@ -468,7 +466,7 @@ class ManualHandControlWidget(QWidget):
         tar_f2 = float(self.value_slider_2.toPlainText())
         tar_f3 = float(self.value_slider_3.toPlainText())
         tar_k1 = float(self.value_slider_4.toPlainText())
-        tar_k2 = float(self.value_slider_5.toPlainText())
+        tar_k2 = 1 + float(self.value_slider_5.toPlainText())
         if self.combo.currentText() == "ReflexSF":
             print "Sending Hand to: \n"
             print(tar_f1,tar_f2,tar_f3,tar_k1,tar_k2)
@@ -504,8 +502,10 @@ class ManualHandControlWidget(QWidget):
     def handleButtonHome(self):
         #send the fingers to home positions
         poseTarget = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=0.0)
-        self.command_pub.publish(poseTarget)
-        self.softHand_pose(f1=30,f2=30,f3=30,f4=30)
+        if self.combo.currentText() == "ReflexSF":
+            self.command_pub.publish(poseTarget)
+        elif self.combo.currentText() == "Soft Hand":
+            self.softHand_pose(f1=30,f2=30,f3=30,f4=30)
 
     def handleButtonReset(self):
         #set slider values to 0
@@ -517,7 +517,7 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_3.setText("0.00")
         self.finger_slider_4.setValue(0)
         self.value_slider_4.setText("0.00")
-        self.finger_slider_5.setValue(0)
+        self.finger_slider_5.setValue(1)
         self.value_slider_5.setText("0.00")
 
 
@@ -567,7 +567,7 @@ class ManualHandControlWidget(QWidget):
             # self.command_pub.publish(poseTarget)
 
             if self.combo.currentText() == "ReflexSF":
-                tar_k2 = float(self.value_slider_5.toPlainText())
+                tar_k2 = 1 + float(self.value_slider_5.toPlainText())
                 poseTarget = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_f4,k2=tar_k2)#preshape=tar_f4)
                 self.command_pub.publish(poseTarget)
             elif self.combo.currentText() == "Soft Hand":
