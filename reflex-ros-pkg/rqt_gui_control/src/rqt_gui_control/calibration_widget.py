@@ -135,7 +135,6 @@ class CalibrationWidget(QWidget):
 
 
 ########## Tighten and Loosen for k1 ######################################################################
-###TODO: figure out how to make preshape calibration work
     def handle_cali_k1_tight(self):
         finger_sel = 4 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
@@ -147,6 +146,7 @@ class CalibrationWidget(QWidget):
         calibrate_hand(self, finger_sel, b)
 
 #############################################################################################################
+#to calibrate thumb rotation, set to an angle of approximately -45 degrees: negative extreme of all movement
     def handle_cali_k2_clock(self):
         finger_sel = 5 # 1 is motor f1
         b = 0 # 0 is tight, 1 is loosen
