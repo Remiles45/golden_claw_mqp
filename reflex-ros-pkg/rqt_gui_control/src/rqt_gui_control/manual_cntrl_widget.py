@@ -314,12 +314,16 @@ class ManualHandControlWidget(QWidget):
             file.close()
         else:
             for pose in self.listPose:
-                if self.combo.currentText() == "ReflexSF":
-                    self.command_pub.publish(pose)
-                elif self.combo.currentText() == "Soft Hand":
-                    self.softHand_pose(f1=pose.f1*50,f2=pose.f2*50,f3=pose.f3*50,f4=pose.k1*50)
-                #give time for message to publish before sending next
-                rospy.sleep(0.2)
+                if pose.f1 == 999:
+                    delay = pose.k2
+                    rospy.sleep(delay)
+                else:
+                    if self.combo.currentText() == "ReflexSF":
+                        self.command_pub.publish(pose)
+                    elif self.combo.currentText() == "Soft Hand":
+                        self.softHand_pose(f1=pose.f1*50,f2=pose.f2*50,f3=pose.f3*50,f4=pose.k1*50)
+                    #give time for message to publish before sending next
+                    rospy.sleep(0.2)
 
 #############################################################################################################
     #Save waypoint list to a grasp file
@@ -489,6 +493,7 @@ class ManualHandControlWidget(QWidget):
         tar_f3 = float(self.value_slider_3.toPlainText())
         tar_k1 = float(self.value_slider_4.toPlainText())
         tar_k2 = 1 + float(self.value_slider_5.toPlainText())
+
         if self.combo.currentText() == "ReflexSF":
             print "Sending Hand to: \n"
             print(tar_f1,tar_f2,tar_f3,tar_k1,tar_k2)
