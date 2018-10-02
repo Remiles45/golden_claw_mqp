@@ -3,6 +3,8 @@ import rospkg
 import rospy
 from python_qt_binding.QtWidgets import *
 from python_qt_binding.QtGui import *
+from PyQt5.QtCore import QEvent, Qt, QTimeLine, QTimer
+# from PyQt5 import QtCore
 # from std_msgs.msg import String
 from std_msgs.msg import Int16MultiArray
 
@@ -16,7 +18,7 @@ from os.path import isfile, join
 
 rospack = rospkg.RosPack()
 FILE_DIR = rospack.get_path('rqt_gui_control') + '/data'
-
+global deleteWaypoint
 class ManualHandControlWidget(QWidget):
 
 
@@ -44,9 +46,9 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_1 = QSlider(1)
         self.finger_slider_1.setMinimum(0)
         self.finger_slider_1.setMaximum(200)
-        self.finger_slider_1.setValue(200)
+        self.finger_slider_1.setValue(0)
 
-        self.value_slider_1 = QTextEdit("2.00")
+        self.value_slider_1 = QTextEdit("0.00")
         self.value_slider_1.setMaximumSize(80,20)
         self.hbox_f1 = QHBoxLayout()
         self.hbox_f1.addWidget(self.finger_slider_1)
@@ -57,9 +59,9 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_2 = QSlider(1)
         self.finger_slider_2.setMinimum(0)
         self.finger_slider_2.setMaximum(200)
-        self.finger_slider_2.setValue(150)
+        self.finger_slider_2.setValue(0)
 
-        self.value_slider_2 = QTextEdit("1.50")
+        self.value_slider_2 = QTextEdit("0.00")
         self.value_slider_2.setMaximumSize(80,20)
         self.hbox_f2 = QHBoxLayout()
         self.hbox_f2.addWidget(self.finger_slider_2)
@@ -70,9 +72,9 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_3 = QSlider(1)
         self.finger_slider_3.setMinimum(0)
         self.finger_slider_3.setMaximum(200)
-        self.finger_slider_3.setValue(100)
+        self.finger_slider_3.setValue(0)
 
-        self.value_slider_3 = QTextEdit("1.00")
+        self.value_slider_3 = QTextEdit("0.00")
         self.value_slider_3.setMaximumSize(80,20)
         self.hbox_f3 = QHBoxLayout()
         self.hbox_f3.addWidget(self.finger_slider_3)
@@ -187,6 +189,7 @@ class ManualHandControlWidget(QWidget):
         self.fileListWidget = QListWidget()
         item = QListWidgetItem("[  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  ]" % (pose0.f1,pose0.f2,pose0.f3,pose0.k1,pose0.k2-1))
         self.listWidget.addItem(item)
+        self.listWidget.installEventFilter(self)#######################################################3
         self.populate_filelist()
 
         self.fileslabel = QLabel("Grasp Files")
@@ -202,7 +205,7 @@ class ManualHandControlWidget(QWidget):
         #List Control
         self.list_control_label = QLabel("Waypoint Control")
         self.list_control_save_button = QPushButton("Add Waypoint")
-        self.list_control_delay_button = QPushButton("Add Delay")###############################
+        self.list_control_delay_button = QPushButton("Add Delay")
         self.list_control_delete_button = QPushButton("Remove Waypoint")
         self.list_control_execute_waypoints = QPushButton("Execute Waypoints")
         self.list_control_save_grasp = QPushButton("Save Grasp")
@@ -262,6 +265,28 @@ class ManualHandControlWidget(QWidget):
         self.current_angle = [0.0,0.0,0.0,0.0]
 
 #############################################################################################################
+
+    def eventFilter(self,source,event):
+        if (event.type() == QEvent.ContextMenu):
+            menu = QMenu(self)
+            addWaypointAbove = menu.addAction("Add Waypoint Above")
+            addWaypointBelow = menu.addAction("Add Waypoint Below")
+            deleteWaypoint = menu.addAction("Delete Waypoint")
+            action = menu.exec_(event.globalPos())
+            if action == addWaypointAbove:
+                print "above"
+            if action == addWaypointBelow:
+                print "below"
+            if action == deleteWaypoint:
+                deleteWaypoint(self)
+
+        return QWidget.eventFilter(self, source, event)
+
+
+
+
+
+
     #Save Current slider pose to waypoint list
     def handle_list_control_save_button(self):
         float_value_1 = float(self.value_slider_1.toPlainText())
@@ -278,25 +303,11 @@ class ManualHandControlWidget(QWidget):
     #Delete selected waypoint from waypoint list
     #TODO: currently can only delete waypoints one at a time
     def handle_list_control_delete_button(self):
-        if (self.listPose != []):
-            if (self.listWidget.currentRow() < 0):
-                error_msg1 = QErrorMessage(self)
-                error_msg1.setWindowTitle("Waypoint Error")
-                error_msg1.showMessage("Please select a valid waypoint to remove")
-            else:
-                print self.listWidget.currentRow()
-                dummy = self.listPose.pop(self.listWidget.currentRow())
-                dummyItem = self.listWidget.takeItem(self.listWidget.currentRow())
-                self.listWidget.removeItemWidget(dummyItem)
-                print "Removed Waypoint \n", dummy
-        else:
-            error_msg2 = QErrorMessage(self)
-            error_msg2.setWindowTitle("Waypoint Error")
-            error_msg2.showMessage("Could not remove waypoint: \nNo waypoints found")
-
+        deleteWaypoint(self)
 
     #Send waypoints from existing waypoint list to the robotic hand
     #TODO: rework glove interface -- add record/stop recording button to save live grasp data to file
+    #wait..... why is glove control in execute waypoints????? shouldnt it be in save? or totally separate?
     def handle_execute_waypoints(self):
         scaled_float_1 = 1.0
         scaled_float_2 = 1.0
@@ -649,6 +660,7 @@ class ManualHandControlWidget(QWidget):
                 self.softHand_pose(f1=tar_f1,f2=tar_f2,f3=tar_f3,f4=tar_f4)
 
 
+
 ########### Load File   ############################################################################
     #check data directory and display available grasp files to run
     def populate_filelist(self):
@@ -656,3 +668,22 @@ class ManualHandControlWidget(QWidget):
         for f in all_files:
             self.fileListWidget.addItem(QListWidgetItem(f))
             self.filename.append(f)
+
+
+
+def deleteWaypoint(self):
+    if (self.listPose != []):
+        if (self.listWidget.currentRow() < 0):
+            error_msg1 = QErrorMessage(self)
+            error_msg1.setWindowTitle("Waypoint Error")
+            error_msg1.showMessage("Please select a valid waypoint to remove")
+        else:
+            print self.listWidget.currentRow()
+            dummy = self.listPose.pop(self.listWidget.currentRow())
+            dummyItem = self.listWidget.takeItem(self.listWidget.currentRow())
+            self.listWidget.removeItemWidget(dummyItem)
+            print "Removed Waypoint \n", dummy
+    else:
+        error_msg2 = QErrorMessage(self)
+        error_msg2.setWindowTitle("Waypoint Error")
+        error_msg2.showMessage("Could not remove waypoint: \nNo waypoints found")
