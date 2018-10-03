@@ -18,7 +18,6 @@ from os.path import isfile, join
 
 rospack = rospkg.RosPack()
 FILE_DIR = rospack.get_path('rqt_gui_control') + '/data'
-global deleteWaypoint
 class ManualHandControlWidget(QWidget):
 
 
@@ -30,6 +29,7 @@ class ManualHandControlWidget(QWidget):
         rospy.Subscriber('/chatter',Int16MultiArray, self.received_int)####FIXME
         self.currentGrasp = []
         self.initUI()
+        self.delete_waypoint = None
         #soft hand control
         self.command_pub_softhand_1 = rospy.Publisher('UbirosGentlePro1', UInt16, queue_size=1)
         self.command_pub_softhand_2 = rospy.Publisher('UbirosGentlePro2', UInt16, queue_size=1)
@@ -187,8 +187,7 @@ class ManualHandControlWidget(QWidget):
         #Display waypoints and files
         self.listWidget = QListWidget()
         self.fileListWidget = QListWidget()
-        item = QListWidgetItem("[  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  ]" % (pose0.f1,pose0.f2,pose0.f3,pose0.k1,pose0.k2-1))
-        self.listWidget.addItem(item)
+        self.populate_poselist()
         self.listWidget.installEventFilter(self)#######################################################3
         self.populate_filelist()
 
@@ -271,14 +270,14 @@ class ManualHandControlWidget(QWidget):
             menu = QMenu(self)
             addWaypointAbove = menu.addAction("Add Waypoint Above")
             addWaypointBelow = menu.addAction("Add Waypoint Below")
-            deleteWaypoint = menu.addAction("Delete Waypoint")
+            self.delete_waypoint = menu.addAction("Delete Waypoint")
             action = menu.exec_(event.globalPos())
             if action == addWaypointAbove:
                 print "above"
             if action == addWaypointBelow:
                 print "below"
-            if action == deleteWaypoint:
-                deleteWaypoint(self)
+            if action == self.delete_waypoint:
+                self.deleteWaypoint()
 
         return QWidget.eventFilter(self, source, event)
 
@@ -297,13 +296,12 @@ class ManualHandControlWidget(QWidget):
 
         pose0 = PoseCommand(f1=float_value_1,f2=float_value_2,f3=float_value_3,k1=float_value_4,k2=1+float_value_5)
         self.listPose.append(pose0)
-        item = QListWidgetItem("[  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  ]" % (pose0.f1, pose0.f2, pose0.f3, pose0.k1, pose0.k2-1))
-        self.listWidget.addItem(item)
+        self.populate_poselist()
 
     #Delete selected waypoint from waypoint list
     #TODO: currently can only delete waypoints one at a time
     def handle_list_control_delete_button(self):
-        deleteWaypoint(self)
+        self.deleteWaypoint()
 
     #Send waypoints from existing waypoint list to the robotic hand
     #TODO: rework glove interface -- add record/stop recording button to save live grasp data to file
@@ -342,7 +340,9 @@ class ManualHandControlWidget(QWidget):
         filepath = QFileDialog.getSaveFileName(self, 'Save File', FILE_DIR)[0]
         name = os.path.basename(filepath)
         #write waypoint list to file
-        if len(self.listPose) > 0:
+        if not filepath:
+            return
+        if self.listPose:
             print 'saved ' + str(len(self.listPose)) + ' waypoints to ' + name
             with open(filepath, 'w') as file:
                 for point in self.listPose:
@@ -379,7 +379,7 @@ class ManualHandControlWidget(QWidget):
                     tar_f3 = float(f3.split(': ')[1])
                     tar_k1 = float(k1.split(': ')[1])
                     tar_k2 = float(k2.split(': ')[1])
-                    if tar_f1 == 999:
+                    if self.is_delay(pose) == 999:
                         rospy.sleep(tar_k2)
                     else:
                         if self.combo.currentText() == "ReflexSF":
@@ -582,8 +582,7 @@ class ManualHandControlWidget(QWidget):
                     tar_k2 = float(k2.split(': ')[1])
                     pose0 = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=1+tar_k2)
                     self.listPose.append(pose0)
-                    item = QListWidgetItem("[  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  ]" % (pose0.f1, pose0.f2, pose0.f3, pose0.k1, pose0.k2-1))
-                    self.listWidget.addItem(item)
+            self.populate_poselist()
 
         except AttributeError:
             error_msg = QErrorMessage(self)
@@ -602,8 +601,7 @@ class ManualHandControlWidget(QWidget):
        if ok:
            pose0 = PoseCommand(f1=999,f2=999,f3=999,k1=999,k2=num)
            self.listPose.append(pose0)
-           item = QListWidgetItem("%.2f second delay" % num)
-           self.listWidget.addItem(item)
+           self.populate_poselist()
 
 
     ## Update Value of the hand for checking for waypoint
@@ -671,19 +669,39 @@ class ManualHandControlWidget(QWidget):
 
 
 
-def deleteWaypoint(self):
-    if (self.listPose != []):
-        if (self.listWidget.currentRow() < 0):
-            error_msg1 = QErrorMessage(self)
-            error_msg1.setWindowTitle("Waypoint Error")
-            error_msg1.showMessage("Please select a valid waypoint to remove")
+    def deleteWaypoint(self):
+        if (self.listPose):
+            if (self.listWidget.currentRow() < 0):
+                error_msg1 = QErrorMessage(self)
+                error_msg1.setWindowTitle("Waypoint Error")
+                error_msg1.showMessage("Please select a valid waypoint to remove")
+            else:
+                print self.listWidget.currentRow()
+                dummy = self.listPose.pop(self.listWidget.currentRow())
+                #dummyItem = self.listWidget.takeItem(self.listWidget.currentRow())
+                #self.listWidget.removeItemWidget(dummyItem)
+                self.populate_poselist()
+                print "Removed Waypoint \n", dummy
         else:
-            print self.listWidget.currentRow()
-            dummy = self.listPose.pop(self.listWidget.currentRow())
-            dummyItem = self.listWidget.takeItem(self.listWidget.currentRow())
-            self.listWidget.removeItemWidget(dummyItem)
-            print "Removed Waypoint \n", dummy
-    else:
-        error_msg2 = QErrorMessage(self)
-        error_msg2.setWindowTitle("Waypoint Error")
-        error_msg2.showMessage("Could not remove waypoint: \nNo waypoints found")
+            error_msg2 = QErrorMessage(self)
+            error_msg2.setWindowTitle("Waypoint Error")
+            error_msg2.showMessage("Could not remove waypoint: \nNo waypoints found")
+
+
+    def is_delay(self, pose):
+        f1 = pose.f1 == 999
+        f2 = pose.f2 == 999
+        f3 = pose.f3 == 999
+        k1 = pose.k1 == 999
+        return f1 and f2 and f3 and k1
+
+    def populate_poselist(self):
+        count = 1
+        self.listWidget.clear()
+        for pose in self.listPose:
+            if not self.is_delay(pose):
+                item = QListWidgetItem("%d. [  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  ]" % (count, pose.f1,pose.f2,pose.f3,pose.k1,pose.k2-1))
+            else:
+                item = QListWidgetItem("%d. %.2f second delay" % (count, pose.k2))
+            self.listWidget.addItem(item)
+            count += 1
