@@ -25,6 +25,7 @@ class ManualHandControlWidget(QWidget):
         rospy.Subscriber('/chatter',Int16MultiArray, self.received_int)####FIXME
         self.currentGrasp = []
         self.initUI()
+        self.delete_waypoint = None
         #soft hand control
         self.command_pub_softhand_1 = rospy.Publisher('UbirosGentlePro1', UInt16, queue_size=1)
         self.command_pub_softhand_2 = rospy.Publisher('UbirosGentlePro2', UInt16, queue_size=1)
@@ -182,8 +183,7 @@ class ManualHandControlWidget(QWidget):
         #Display waypoints and files
         self.listWidget = QListWidget()
         self.fileListWidget = QListWidget()
-        item = QListWidgetItem("[  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  ]" % (pose0.f1,pose0.f2,pose0.f3,pose0.k1,pose0.k2-1))
-        self.listWidget.addItem(item)
+        self.populate_poselist()
         self.listWidget.installEventFilter(self)#######################################################3
         self.populate_filelist()
 
@@ -326,7 +326,9 @@ class ManualHandControlWidget(QWidget):
         filepath = QFileDialog.getSaveFileName(self, 'Save File', FILE_DIR)[0]
         name = os.path.basename(filepath)
         #write waypoint list to file
-        if len(self.listPose) > 0:
+        if not filepath:
+            return
+        if self.listPose:
             print 'saved ' + str(len(self.listPose)) + ' waypoints to ' + name
             with open(filepath, 'w') as file:
                 for point in self.listPose:
