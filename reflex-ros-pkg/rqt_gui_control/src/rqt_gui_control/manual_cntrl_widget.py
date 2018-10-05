@@ -183,7 +183,7 @@ class ManualHandControlWidget(QWidget):
         #Display waypoints and files
         self.listWidget = QListWidget()
         self.fileListWidget = QListWidget()
-        self.populate_poselist()
+        # self.populate_poselist()
         self.listWidget.installEventFilter(self)#######################################################3
         self.populate_filelist()
 
