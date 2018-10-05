@@ -186,6 +186,7 @@ class ManualHandControlWidget(QWidget):
         # self.populate_poselist()
         self.listWidget.installEventFilter(self)#######################################################3
         self.populate_filelist()
+        self.populate_poselist()
 
         self.fileslabel = QLabel("Grasp Files")
         self.listlabel = QLabel("List waypoint")
@@ -566,6 +567,23 @@ class ManualHandControlWidget(QWidget):
             self.fileListWidget.addItem(QListWidgetItem(f))
             self.filename.append(f)
 
+    def is_delay(self, pose):
+        f1 = pose.f1 == 999
+        f2 = pose.f2 == 999
+        f3 = pose.f3 == 999
+        k1 = pose.k1 == 999
+        return f1 and f2 and f3 and k1
+
+    def populate_poselist(self):
+        count = 1
+        self.listWidget.clear()
+        for pose in self.listPose:
+            if not self.is_delay(pose):
+                item = QListWidgetItem("%d. [  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  ]" % (count, pose.f1,pose.f2,pose.f3,pose.k1,pose.k2-1))
+            else:
+                item = QListWidgetItem("%d. %.2f second delay" % (count, pose.k2))
+            self.listWidget.addItem(item)
+            count += 1
 
 
     def deleteWaypoint(self):
@@ -576,9 +594,8 @@ class ManualHandControlWidget(QWidget):
                 error_msg1.showMessage("Please select a valid waypoint to remove")
             else:
                 print self.listWidget.currentRow()
-                dummy = self.listPose.pop(self.listWidget.currentRow())
-                dummyItem = self.listWidget.takeItem(self.listWidget.currentRow())
-                self.listWidget.removeItemWidget(dummyItem)
+                self.listPose.pop(self.listWidget.currentRow())
+                self.populate_poselist()
                 print "Removed Waypoint \n", dummy
         else:
             error_msg2 = QErrorMessage(self)
@@ -588,19 +605,14 @@ class ManualHandControlWidget(QWidget):
 
 
     def addWaypoint(self, is_below, desired_pose):
-    #is below = true if waypoint is desired to be below selected row, above if desired to be above, -1 if desired at end of list
-        if desired_pose.f1 == 999:
-           item = QListWidgetItem("%.2f second delay" % desired_pose.k2)
-        else:
-            item = QListWidgetItem("[  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  ]" % (desired_pose.f1, desired_pose.f2, desired_pose.f3, desired_pose.k1, desired_pose.k2-1))
-        #place waypoint in desired location in the list
+        # is below = true if waypoint is desired to be below selected row, above if desired to be above, -1 if desired at end of list
         if is_below < 0:
             self.listPose.append(desired_pose)
-            self.listWidget.addItem(item)
+            self.populate_poselist()
         else:
             list_location = int(self.listWidget.currentRow()) + is_below
             self.listPose.insert(list_location, desired_pose)
-            self.listWidget.insertItem(list_location, item)
+            self.populate_poselist()
 
 
 
@@ -609,17 +621,17 @@ class ManualHandControlWidget(QWidget):
     def readFile(self):
         pose_list = []
         try:
-            #read selected file
+            # read selected file
             file_name = self.fileListWidget.currentItem().text()
             file_path = "{}/{}".format(FILE_DIR, file_name)
             file = open(file_path,'r').read()
-            #Divide file into poses
+            # Divide file into poses
             data_chunks = file.split('//')
             for pose in data_chunks:
                 if len(pose) > 1:
-                    #divide each pose up by commands per finger
+                    # divide each pose up by commands per finger
                     f1,f2,f3,k1,k2 = pose.split('\n')
-                    #choose only the numerical chunk of command and convert to float
+                    # choose only the numerical chunk of command and convert to float
                     tar_f1 = float(f1.split(': ')[1])
                     tar_f2 = float(f2.split(': ')[1])
                     tar_f3 = float(f3.split(': ')[1])
@@ -628,8 +640,6 @@ class ManualHandControlWidget(QWidget):
                     pose0 = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=tar_k2)
                     pose_list.append(pose0)
             return pose_list
-
-
         except AttributeError:
             error_msg = QErrorMessage(self)
             error_msg.setWindowTitle("File Error")
@@ -672,3 +682,4 @@ class ManualHandControlWidget(QWidget):
           return pose0
         else:
           return False
+
