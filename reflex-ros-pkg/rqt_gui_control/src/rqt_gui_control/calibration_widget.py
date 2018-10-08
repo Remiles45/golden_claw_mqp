@@ -59,15 +59,24 @@ class CalibrationWidget(QWidget):
         self.hbox_cali_k2.addWidget(self.cali_k2_counterclock_button)
 
 
+        #Instructions
+        self.finger_instructions = QLabel("\nAlign Fingers to Appropriate Zero Points\n")
+        self.thumb_instruction = QLabel("\n\nRotate thumb to approximately -60 degrees with respect to the desired center position")
+
+
+
+
 ############ Adding rows and set up singal for button ####################################################
         #QFormLayout similar to HBox but you know it look like form, add everything to FormLayout
         self.fbox = QFormLayout()
-
+        self.fbox.addRow(self.finger_instructions)
         self.fbox.addRow(self.cali_f1_label,self.hbox_cali_f1)
         self.fbox.addRow(self.cali_f2_label,self.hbox_cali_f2)
         self.fbox.addRow(self.cali_f3_label,self.hbox_cali_f3)
         self.fbox.addRow(self.cali_k1_label,self.hbox_cali_k1)
+        self.fbox.addRow(self.thumb_instruction)
         self.fbox.addRow(self.cali_k2_label,self.hbox_cali_k2)
+
 
         # Add connect signal to f1 tight and loosen button
         self.cali_f1_tight_button.clicked.connect(self.handle_cali_f1_tight)
@@ -93,7 +102,7 @@ class CalibrationWidget(QWidget):
         self.setLayout(self.fbox)
 
         self.setWindowTitle("Calibration")
-        self.resize(640,480)
+        # self.resize(640,400)
         self.dumbnum = 0
         self.show()
 

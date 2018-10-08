@@ -1,4 +1,5 @@
 import os
+import sys
 import rospkg
 import rospy
 from python_qt_binding.QtWidgets import *
@@ -9,6 +10,8 @@ from reflex_msgs.msg import PoseCommand
 from std_msgs.msg import UInt16
 from os import listdir
 from os.path import isfile, join
+from calibration_widget import CalibrationWidget
+
 
 
 
@@ -211,6 +214,13 @@ class ManualHandControlWidget(QWidget):
         self.list_control.addWidget(self.list_control_execute_waypoints)
         self.list_control.addWidget(self.list_control_delete_all)
 
+
+
+        #calibration
+        self.calibration = QHBoxLayout()
+        self.calibrate_button = QPushButton("Calibrate Hand")
+        self.calibration.addWidget(self.calibrate_button)
+
 ############ Adding Sections to GUI ####################################################
 #using the buttons defined above to create the GUI itself
         self.fbox = QFormLayout()
@@ -225,6 +235,7 @@ class ManualHandControlWidget(QWidget):
         self.fbox.addRow(self.list_control_label,self.list_control)
         self.fbox.addRow(self.fileslabel, self.fileListWidget)
         self.fbox.addRow(QLabel(""), self.file_control)
+        self.fbox.addRow(QLabel(""), self.calibration)
         self.fbox.addRow(self.combo_label,self.combo)
         self.fbox.addRow(self.glove_label,self.hbox_glove)
 
@@ -248,6 +259,12 @@ class ManualHandControlWidget(QWidget):
         self.list_control_delete_all.clicked.connect(self.handle_delete_all)
         self.file_execute_button.clicked.connect(self.handle_run_existing_grasp_button)
         self.file_load_button.clicked.connect(self.handle_add_file_waypoints)
+
+        #incorporate the calibration widget if button is clicked
+        self.calibrate_button.clicked.connect(self.handle_calibrate_widget)
+
+
+
 
 ######### Set up window ###################################################################################
         #Set the widget to layout and show the widget
@@ -293,6 +310,12 @@ class ManualHandControlWidget(QWidget):
                 self.deleteWaypoint(self.listWidget.currentRow())
 
         return QWidget.eventFilter(self, source, event)
+
+    #Popup window with calibration GUI for Reflex SF hand
+    def handle_calibrate_widget(self):
+        self.calibrate_window = CalibrationWidget()
+
+
 
 #delete all stored waypoints
     def handle_delete_all(self):
@@ -475,12 +498,16 @@ class ManualHandControlWidget(QWidget):
             self.finger_label_5.setHidden(False)
             self.finger_slider_5.setHidden(False)
             self.value_slider_5.setHidden(False)
+
+            self.calibrate_button.setHidden(False)
         elif self.combo.currentText() == "Soft Hand":
             self.finger_label_4.setText("Goal for F4")
             self.tick_f4.setHidden(False)
             self.finger_label_5.setHidden(True)
             self.finger_slider_5.setHidden(True)
             self.value_slider_5.setHidden(True)
+
+            self.calibrate_button.setHidden(True)
 
     #Reset fingers to home positions
     def handleButtonHome(self):
@@ -592,14 +619,14 @@ class ManualHandControlWidget(QWidget):
             count += 1
 
 
-    def deleteWaypoint(self, object):
+    def deleteWaypoint(self, point_sel):
         if (self.listPose != []):
-            if (object < 0):
+            if (point_sel < 0):
                 error_msg1 = QErrorMessage(self)
                 error_msg1.setWindowTitle("Waypoint Error")
                 error_msg1.showMessage("Please select a valid waypoint to remove")
             else:
-                self.listPose.pop(object)
+                self.listPose.pop(point_sel)
                 self.populate_poselist()
         else:
             error_msg2 = QErrorMessage(self)

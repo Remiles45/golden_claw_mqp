@@ -8,7 +8,7 @@ from python_qt_binding.QtWidgets import QWidget
 from manual_cntrl_widget import ManualHandControlWidget
 # from my_widget_vel_pos import MyWidgetVelPos
 # from my_widget_vel import MyWidgetVel
-from calibration_widget import CalibrationWidget
+# from calibration_widget import CalibrationWidget
 from server_gui import ServerGui
 # from grasp_cntrl_widget import GraspControlWidget
 
@@ -25,16 +25,9 @@ class RobotHandPlugin(Plugin):
         # Create QWidget
         self._widget = ManualHandControlWidget()
         self._widget.setObjectName('MyPosUI')
-        self._widget4 = CalibrationWidget()
-        self._widget4.setObjectName('MyCali')
-        # self._widget5 = GraspControlWidget()
-        # self._widget5.setObjectName('Glove Interface')
-        # self._widget5.setWindowTitle('Server')
 
         # Add widget to the user interface
         context.add_widget(self._widget)
-        context.add_widget(self._widget4)
-        # context.add_widget(self._widget5)
 
     def shutdown_plugin(self):
         # TODO unregister all publishers here
