@@ -6,12 +6,11 @@ from python_qt_binding.QtWidgets import *
 from python_qt_binding.QtGui import *
 from PyQt5.QtCore import QEvent, Qt, QTimeLine, QTimer
 from std_msgs.msg import Int16MultiArray
-from reflex_msgs.msg import PoseCommand
+from reflex_msgs.msg import PoseCommand, Command, VelocityCommand
 from std_msgs.msg import UInt16
 from os import listdir
 from os.path import isfile, join
 from calibration_widget import CalibrationWidget
-
 
 
 
@@ -23,7 +22,7 @@ class ManualHandControlWidget(QWidget):
     def __init__(self):
         super(ManualHandControlWidget, self).__init__()
         #Reflex SF hand control
-        self.command_pub = rospy.Publisher('/reflex_sf/command_position', PoseCommand, queue_size=1)
+        self.command_pub = rospy.Publisher('/reflex_sf/command', Command, queue_size=1) #_position
         #Data glove
         rospy.Subscriber('/chatter',Int16MultiArray, self.received_int)####FIXME
         self.currentGrasp = []
@@ -39,6 +38,7 @@ class ManualHandControlWidget(QWidget):
     def initUI(self):
 
 ################## Position Control GUI ########################################################################
+
 #Fingers: slider range 0 -> 200
         #Finger 1 row (F1)
         self.finger_label_1 = QLabel("Goal for f1")
@@ -182,6 +182,8 @@ class ManualHandControlWidget(QWidget):
         self.filename = []
         #initial point at conceptual home position (thumb in center position)
         pose0 = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
+        velocity0 = VelocityCommand(f1=1,f2=1,f3=1,k1=1,k2=1)
+        command0 = Command(pose=pose0, velocity=velocity0)
         self.listPose.append(pose0)
         #Display waypoints and files
         self.listWidget = QListWidget()
@@ -511,8 +513,8 @@ class ManualHandControlWidget(QWidget):
 
     #Reset fingers to home positions
     def handleButtonHome(self):
-        pose = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
-        self.moveHandtoPose(pose)
+        pose = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)############################################
+        self.moveHandtoPose(pose=pose,velocity=velocity0)
 
 
     #Reset slider values to home positions
@@ -588,7 +590,7 @@ class ManualHandControlWidget(QWidget):
             tar_k1 = float(self.value_slider_4.toPlainText())
             tar_k2 = float(self.value_slider_5.toPlainText())
             desired_pose = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_f4,k2=tar_k2)
-            self.moveHandtoPose(desired_pose)
+            self.moveHandtoPose(pose=desired_pose,velocity=velocity0)
 
 
 
@@ -684,11 +686,13 @@ class ManualHandControlWidget(QWidget):
 
 #Send robot hand to desired position
     def moveHandtoPose(self, poseTarget):
+        command = VelocityCommand(f1=1,f2=2,f3=5,k1=0,k2=0)
         if self.is_delay(poseTarget):
             rospy.sleep(poseTarget.k2)
         else:
             if self.combo.currentText() == "ReflexSF":
-                self.command_pub.publish(poseTarget)
+                # test_velocity =
+                self.command_pub.publish(pose=poseTarget,velocity=command)
             elif self.combo.currentText() == "Soft Hand":
                 self.softHand_pose(f1=poseTarget.f1*50,f2=poseTarget.f2*50,f3=poseTarget.f3*50,f4=poseTarget.k1*50)
             rospy.sleep(0.2)
@@ -702,6 +706,8 @@ class ManualHandControlWidget(QWidget):
         float_value_4 = float(self.value_slider_4.toPlainText())
         float_value_5 = float(self.value_slider_5.toPlainText())
         pose0 = PoseCommand(f1=float_value_1,f2=float_value_2,f3=float_value_3,k1=float_value_4,k2=1+float_value_5)
+        velocity0 = VelocityCommand(f1=1,f2=1,f3=1,k1=1,k2=1)
+        command = Command(pose=pose0,velocity=velocity0)
         return pose0
 
     #prompt for delay input
