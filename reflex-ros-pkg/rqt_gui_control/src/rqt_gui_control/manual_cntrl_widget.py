@@ -49,7 +49,8 @@ class ManualHandControlWidget(QWidget):
 
         self.value_slider_1 = QLabel("0.00")
         self.value_slider_1.setMaximumSize(80,20)
-        self.f1_speed = QSpinBox()
+        self.f1_speed = QDoubleSpinBox()
+        self.f1_speed.setSingleStep(0.05)
         self.hbox_f1 = QHBoxLayout()
         self.hbox_f1.addWidget(self.finger_slider_1)
         self.hbox_f1.addWidget(self.value_slider_1)
@@ -65,7 +66,8 @@ class ManualHandControlWidget(QWidget):
 
         self.value_slider_2 = QLabel("0.00")
         self.value_slider_2.setMaximumSize(80,20)
-        self.f2_speed = QSpinBox()
+        self.f2_speed = QDoubleSpinBox()
+        self.f2_speed.setSingleStep(0.05)
         self.hbox_f2 = QHBoxLayout()
         self.hbox_f2.addWidget(self.finger_slider_2)
         self.hbox_f2.addWidget(self.value_slider_2)
@@ -81,7 +83,8 @@ class ManualHandControlWidget(QWidget):
 
         self.value_slider_3 = QLabel("0.00")
         self.value_slider_3.setMaximumSize(80,20)
-        self.f3_speed = QSpinBox()
+        self.f3_speed = QDoubleSpinBox()
+        self.f3_speed.setSingleStep(0.05)
         self.hbox_f3 = QHBoxLayout()
         self.hbox_f3.addWidget(self.finger_slider_3)
         self.hbox_f3.addWidget(self.value_slider_3)
@@ -98,7 +101,8 @@ class ManualHandControlWidget(QWidget):
         #initialize at position 0
         self.value_slider_4 = QLabel("0.00")
         self.value_slider_4.setMaximumSize(80,20)
-        self.f4_speed = QSpinBox()
+        self.f4_speed = QDoubleSpinBox()
+        self.f4_speed.setSingleStep(0.05)
         self.hbox_f4 = QHBoxLayout()
         self.hbox_f4.addWidget(self.finger_slider_4)
         self.hbox_f4.addWidget(self.value_slider_4)
@@ -116,7 +120,8 @@ class ManualHandControlWidget(QWidget):
         #set initial value to center position
         self.value_slider_5 = QLabel("0.00")
         self.value_slider_5.setMaximumSize(80,20)
-        self.f5_speed = QSpinBox()
+        self.f5_speed = QDoubleSpinBox()
+        self.f5_speed.setSingleStep(0.05)
         self.hbox_f5 = QHBoxLayout()
         self.hbox_f5.addWidget(self.finger_slider_5)
         self.hbox_f5.addWidget(self.value_slider_5)
