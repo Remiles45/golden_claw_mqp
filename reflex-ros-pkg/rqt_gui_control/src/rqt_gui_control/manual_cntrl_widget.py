@@ -25,7 +25,7 @@ class ManualHandControlWidget(QWidget):
         #Reflex SF hand control
         self.command_pub = rospy.Publisher('/reflex_sf/command_position', PoseCommand, queue_size=1)
         #Data glove
-        rospy.Subscriber('/chatter',Int16MultiArray, self.received_int)####FIXME
+        rospy.Subscriber('/glove_data',Int16MultiArray, self.received_int)
         self.currentGrasp = []
         self.initUI()
         self.delete_waypoint = None
@@ -47,11 +47,14 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_1.setMaximum(200)
         self.finger_slider_1.setValue(0)
 
-        self.value_slider_1 = QTextEdit("0.00")
+        self.value_slider_1 = QLabel("0.00")
         self.value_slider_1.setMaximumSize(80,20)
+        self.f1_speed = QSpinBox()
         self.hbox_f1 = QHBoxLayout()
         self.hbox_f1.addWidget(self.finger_slider_1)
         self.hbox_f1.addWidget(self.value_slider_1)
+        self.hbox_f1.addWidget(self.f1_speed)
+        self.hbox_f1.addWidget( QLabel("Rad/Sec"))
 
         #Finger 2 row (F2)
         self.finger_label_2 = QLabel("Goal for f2")
@@ -60,11 +63,14 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_2.setMaximum(200)
         self.finger_slider_2.setValue(0)
 
-        self.value_slider_2 = QTextEdit("0.00")
+        self.value_slider_2 = QLabel("0.00")
         self.value_slider_2.setMaximumSize(80,20)
+        self.f2_speed = QSpinBox()
         self.hbox_f2 = QHBoxLayout()
         self.hbox_f2.addWidget(self.finger_slider_2)
         self.hbox_f2.addWidget(self.value_slider_2)
+        self.hbox_f2.addWidget(self.f2_speed)
+        self.hbox_f2.addWidget( QLabel("Rad/Sec"))
 
         #Finger 3 row (F3)
         self.finger_label_3 = QLabel("Goal for f3")
@@ -73,11 +79,14 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_3.setMaximum(200)
         self.finger_slider_3.setValue(0)
 
-        self.value_slider_3 = QTextEdit("0.00")
+        self.value_slider_3 = QLabel("0.00")
         self.value_slider_3.setMaximumSize(80,20)
+        self.f3_speed = QSpinBox()
         self.hbox_f3 = QHBoxLayout()
         self.hbox_f3.addWidget(self.finger_slider_3)
         self.hbox_f3.addWidget(self.value_slider_3)
+        self.hbox_f3.addWidget(self.f3_speed)
+        self.hbox_f3.addWidget( QLabel("Rad/Sec"))
 
 
         #Reflex SF hand distance between fingers (k1)
@@ -87,11 +96,14 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_4.setMaximum(200)
         self.finger_slider_4.setValue(0)
         #initialize at position 0
-        self.value_slider_4 = QTextEdit("0.00")
+        self.value_slider_4 = QLabel("0.00")
         self.value_slider_4.setMaximumSize(80,20)
+        self.f4_speed = QSpinBox()
         self.hbox_f4 = QHBoxLayout()
         self.hbox_f4.addWidget(self.finger_slider_4)
         self.hbox_f4.addWidget(self.value_slider_4)
+        self.hbox_f4.addWidget(self.f4_speed)
+        self.hbox_f4.addWidget( QLabel("Rad/Sec"))
 
 
         #Reflex SF hand thumb rotation (k2)
@@ -102,11 +114,15 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_5.setMaximum(100)
         self.finger_slider_5.setValue(0)
         #set initial value to center position
-        self.value_slider_5 = QTextEdit("0.00")
+        self.value_slider_5 = QLabel("0.00")
         self.value_slider_5.setMaximumSize(80,20)
+        self.f5_speed = QSpinBox()
         self.hbox_f5 = QHBoxLayout()
         self.hbox_f5.addWidget(self.finger_slider_5)
         self.hbox_f5.addWidget(self.value_slider_5)
+        self.hbox_f5.addWidget(self.f5_speed)
+        self.hbox_f5.addWidget( QLabel("Rad/Sec"))
+
 
 ########## Coupling Row ###################################################################################
         #Synchronize selected fingers
