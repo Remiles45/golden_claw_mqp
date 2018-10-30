@@ -594,7 +594,7 @@ class ManualHandControlWidget(QWidget):
         if delay == False:
             return
         else:
-            self.addWaypoint(is_below=-1,desired_pose=delay)
+            self.addWaypoint(is_below=-1,cmd=delay)
 
 
     def handle_grasp_save_button(self):
@@ -662,7 +662,9 @@ class ManualHandControlWidget(QWidget):
             tar_k1 = float(self.value_slider_4.toPlainText())
             tar_k2 = float(self.value_slider_5.toPlainText())
             desired_pose = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_f4,k2=tar_k2)
-            self.moveHandtoPose(desired_pose, velocity0)
+            vel = VelocityCommand(f1=0.1,f2=0.1,f3=0.1,k1=0.1,k2=0.1)
+            cmd = Command(pose=desired_pose,velocity=vel)
+            self.moveHandtoPose(command=cmd) #desired_pose, velocity0)
 
 
 
@@ -737,8 +739,6 @@ class ManualHandControlWidget(QWidget):
             # Divide file into poses
             data_chunks = file.split('//')
             data_chunks.pop(0) #the file gets saved with an extra // trigger
-            print 'data ' + str(len(data_chunks))
-            # if len(data_chunks) > 1:
             for command in data_chunks:
                 p_or_v = command.split('***')
                 cnt = 0
@@ -772,13 +772,12 @@ class ManualHandControlWidget(QWidget):
 
 
 #Send robot hand to desired position
-    def moveHandtoPose(self, command): #poseTarget, velocityTarget):
+    def moveHandtoPose(self, command):
         poseTarget = command.pose
         if self.is_delay(poseTarget):
             rospy.sleep(poseTarget.k2)
         else:
             if self.combo.currentText() == "ReflexSF":
-                # command = Command(pose=poseTarget, velocity=velocityTarget)
                 self.command_pub.publish(command)
             elif self.combo.currentText() == "Soft Hand":
                 self.softHand_pose(f1=poseTarget.f1*50,f2=poseTarget.f2*50,f3=poseTarget.f3*50,f4=poseTarget.k1*50)
