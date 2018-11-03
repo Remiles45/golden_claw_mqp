@@ -15,7 +15,7 @@ from std_msgs.msg import UInt16
 from os import listdir
 from os.path import isfile, join
 from calibration_widget import CalibrationWidget
-
+from glove_cntrl_widget import GloveWidget
 
 
 
@@ -32,7 +32,7 @@ class ManualHandControlWidget(QWidget):
         #Reflex SF hand control
         self.command_pub = rospy.Publisher('/reflex_sf/command', Command, queue_size=1) #_position
         #Data glove
-        rospy.Subscriber('/glove_data',Int16MultiArray, self.received_int)
+        # rospy.Subscriber('/glove_data',Int16MultiArray, self.received_int)
         self.currentGrasp = []
         self.initUI()
         self.delete_waypoint = None
@@ -46,6 +46,15 @@ class ManualHandControlWidget(QWidget):
     def initUI(self):
 
 ################## Position Control GUI ########################################################################
+#Select Manual or Glove control
+        self.control_select_label = QLabel("Hand Control Method")
+        self.hand_controller = QComboBox(self)
+        self.hand_controller.addItem("Manual Control")
+        self.hand_controller.addItem("Glove Control")
+        self.control_hbox = QHBoxLayout()
+        self.control_hbox.addWidget(self.hand_controller)
+
+        self.hand_controller.currentIndexChanged.connect(self.handleHandSelectChange)
 #Fingers: slider range 0 -> 200
         #Finger 1 row (F1)
         self.finger_label_1 = QLabel("Goal for f1")
@@ -260,6 +269,7 @@ class ManualHandControlWidget(QWidget):
 ############ Adding Sections to GUI ####################################################
 #using the buttons defined above to create the GUI itself
         self.fbox = QFormLayout()
+        self.fbox.addRow(self.control_select_label,self.control_hbox)
         self.fbox.addRow(self.finger_label_1,self.hbox_f1)
         self.fbox.addRow(self.finger_label_2,self.hbox_f2)
         self.fbox.addRow(self.finger_label_3,self.hbox_f3)
@@ -538,6 +548,14 @@ class ManualHandControlWidget(QWidget):
         curr_command = self.getCurrCommand()
         self.moveHandtoPose(curr_command)
 
+    def handleControllerSelection(self):
+        """
+        Change Control method according to user selection
+        """
+        if self.hand_controller.currentText() == "Manual Control":
+            self.hbox_f1.setHidden(False)
+        elif self.hand_controller.currentText() == "Glove Control":
+            self.hbox_f1.setHidden(True)
 
     def handleHandSelectChange(self):
         """Change the UI labels accordingly with the selected robot hand.
@@ -636,35 +654,6 @@ class ManualHandControlWidget(QWidget):
         self.command_pub_softhand_3.publish(f3)
         self.command_pub_softhand_4.publish(f4)
 
-    # Receive messages from data glove
-    def received_int(self, value_received):
-        #Callback for Glove MSGs
-        #TODO figure out wtf is going on here
-        scaled_float_1 = 2.0-(float(value_received.data[0])-450.0)/100.0
-        scaled_float_2 = 2.0-(float(value_received.data[1])-500.0)/80.0
-        scaled_float_3 = 2.0 - (float(value_received.data[2])-440)/80.0
-
-
-        if (self.tick_glove_state == 1):
-            # Scale raw value into readable value
-            self.value_glove_1.setText("%2.2f" % scaled_float_1)
-            self.value_glove_2.setText("%2.2f" % scaled_float_2)
-            self.value_glove_3.setText("%2.2f" % scaled_float_3)
-            data = str(scaled_float_1) + ";" +str(scaled_float_2) + ";" + str(scaled_float_3) + "\n"
-            #why are they writing to a file????????? wtf is going on here. Im so confused
-            filename = "data/grasp1.txt"
-            file = open(filename, "a")
-            file.write(data)
-            file.close()
-            tar_f1 = scaled_float_2
-            tar_f2 = scaled_float_3
-            tar_f3 = scaled_float_1
-            tar_k1 = float(self.value_slider_4.toPlainText())
-            tar_k2 = float(self.value_slider_5.toPlainText())
-            desired_pose = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_f4,k2=tar_k2)
-            vel = VelocityCommand(f1=0.1,f2=0.1,f3=0.1,k1=0.1,k2=0.1)
-            cmd = Command(pose=desired_pose,velocity=vel)
-            self.moveHandtoPose(command=cmd) #desired_pose, velocity0)
 
 
 

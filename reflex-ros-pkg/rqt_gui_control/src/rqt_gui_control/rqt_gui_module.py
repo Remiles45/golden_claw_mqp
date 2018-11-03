@@ -6,11 +6,7 @@ from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import QWidget
 from manual_cntrl_widget import ManualHandControlWidget
-# from my_widget_vel_pos import MyWidgetVelPos
-# from my_widget_vel import MyWidgetVel
-# from calibration_widget import CalibrationWidget
 from server_gui import ServerGui
-# from grasp_cntrl_widget import GraspControlWidget
 
 import socket               # Import socket module
 
