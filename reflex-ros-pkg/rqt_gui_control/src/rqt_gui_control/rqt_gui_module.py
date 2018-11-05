@@ -4,26 +4,16 @@ import rospkg
 
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
-from python_qt_binding.QtWidgets import QWidget
-from manual_cntrl_widget import ManualHandControlWidget
-from server_gui import ServerGui
+from python_qt_binding.QtWidgets import *
+from ui_design import *
 
-import socket               # Import socket module
-
+widget = QMainWindow() #QWidget()
 class RobotHandPlugin(Plugin):
-
     def __init__(self, context):
         super(RobotHandPlugin, self).__init__(context)
-        # Give QObjects reasonable names
-        self.setObjectName('RobotHandPlugin')
+        context.ui_design = TestClass()
+        context.add_widget(context.ui_design)
 
-
-        # Create QWidget
-        self._widget = ManualHandControlWidget()
-        self._widget.setObjectName('MyPosUI')
-
-        # Add widget to the user interface
-        context.add_widget(self._widget)
 
     def shutdown_plugin(self):
         # TODO unregister all publishers here

@@ -21,7 +21,7 @@ class CalibrationWidget(QWidget):
         self.cali_f1_label = QLabel("Calibrate f1")
         self.cali_f1_tight_button = QPushButton("Tightening f1")
         self.cali_f1_loosen_button = QPushButton("Loosensing f1")
-        self.hbox_cali_f1 = QHBoxLayout()
+        self.hbox_cali_f1 = QVBoxLayout()
         self.hbox_cali_f1.addWidget(self.cali_f1_tight_button)
         self.hbox_cali_f1.addWidget(self.cali_f1_loosen_button)
 
@@ -29,7 +29,7 @@ class CalibrationWidget(QWidget):
         self.cali_f2_label = QLabel("Calibrate f2")
         self.cali_f2_tight_button = QPushButton("Tightening f2")
         self.cali_f2_loosen_button = QPushButton("Loosensing f2")
-        self.hbox_cali_f2 = QHBoxLayout()
+        self.hbox_cali_f2 = QVBoxLayout()
         self.hbox_cali_f2.addWidget(self.cali_f2_tight_button)
         self.hbox_cali_f2.addWidget(self.cali_f2_loosen_button)
 
@@ -37,7 +37,7 @@ class CalibrationWidget(QWidget):
         self.cali_f3_label = QLabel("Calibrate f3")
         self.cali_f3_tight_button = QPushButton("Tightening f3")
         self.cali_f3_loosen_button = QPushButton("Loosensing f3")
-        self.hbox_cali_f3 = QHBoxLayout()
+        self.hbox_cali_f3 = QVBoxLayout()
         self.hbox_cali_f3.addWidget(self.cali_f3_tight_button)
         self.hbox_cali_f3.addWidget(self.cali_f3_loosen_button)
 
@@ -45,7 +45,7 @@ class CalibrationWidget(QWidget):
         self.cali_k1_label = QLabel("Calibrate preshape")
         self.cali_k1_tight_button = QPushButton("Separate Fingers")
         self.cali_k1_loosen_button = QPushButton("Bring Fingers Together")
-        self.hbox_cali_k1 = QHBoxLayout()
+        self.hbox_cali_k1 = QVBoxLayout()
         self.hbox_cali_k1.addWidget(self.cali_k1_tight_button)
         self.hbox_cali_k1.addWidget(self.cali_k1_loosen_button)
 
@@ -54,7 +54,7 @@ class CalibrationWidget(QWidget):
         self.cali_k2_label = QLabel("Calibrate Thumb")
         self.cali_k2_clock_button = QPushButton("Rotate Clockwise")
         self.cali_k2_counterclock_button = QPushButton("Rotate Counterclockwise")
-        self.hbox_cali_k2 = QHBoxLayout()
+        self.hbox_cali_k2 = QVBoxLayout()
         self.hbox_cali_k2.addWidget(self.cali_k2_clock_button)
         self.hbox_cali_k2.addWidget(self.cali_k2_counterclock_button)
 

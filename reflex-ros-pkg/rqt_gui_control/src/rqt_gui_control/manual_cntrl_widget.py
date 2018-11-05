@@ -46,15 +46,15 @@ class ManualHandControlWidget(QWidget):
     def initUI(self):
 
 ################## Position Control GUI ########################################################################
-#Select Manual or Glove control
-        self.control_select_label = QLabel("Hand Control Method")
-        self.hand_controller = QComboBox(self)
-        self.hand_controller.addItem("Manual Control")
-        self.hand_controller.addItem("Glove Control")
-        self.control_hbox = QHBoxLayout()
-        self.control_hbox.addWidget(self.hand_controller)
-
-        self.hand_controller.currentIndexChanged.connect(self.handleHandSelectChange)
+# #Select Manual or Glove control
+#         self.control_select_label = QLabel("Hand Control Method")
+#         self.hand_controller = QComboBox(self)
+#         self.hand_controller.addItem("Manual Control")
+#         self.hand_controller.addItem("Glove Control")
+#         self.control_hbox = QHBoxLayout()
+#         self.control_hbox.addWidget(self.hand_controller)
+#
+#         self.hand_controller.currentIndexChanged.connect(self.handleHandSelectChange)
 #Fingers: slider range 0 -> 200
         #Finger 1 row (F1)
         self.finger_label_1 = QLabel("Goal for f1")
@@ -269,7 +269,7 @@ class ManualHandControlWidget(QWidget):
 ############ Adding Sections to GUI ####################################################
 #using the buttons defined above to create the GUI itself
         self.fbox = QFormLayout()
-        self.fbox.addRow(self.control_select_label,self.control_hbox)
+        # self.fbox.addRow(self.control_select_label,self.control_hbox)
         self.fbox.addRow(self.finger_label_1,self.hbox_f1)
         self.fbox.addRow(self.finger_label_2,self.hbox_f2)
         self.fbox.addRow(self.finger_label_3,self.hbox_f3)
@@ -325,11 +325,11 @@ class ManualHandControlWidget(QWidget):
         #Set the widget to layout and show the widget
         self.setLayout(self.fbox)
 
-        self.setWindowTitle("Manual Hand Controller")
-        self.resize(640,480)
-        self.dumbnum = 0
-        self.show()
-        self.current_angle = [0.0,0.0,0.0,0.0]
+        # self.setWindowTitle("Manual Hand Controller")
+        # self.resize(640,480)
+        # self.dumbnum = 0
+        # self.show()
+        # self.current_angle = [0.0,0.0,0.0,0.0]
 
 #############################################################################################################
 #Actions for when you right click on a waypoint in the list
@@ -548,14 +548,6 @@ class ManualHandControlWidget(QWidget):
         curr_command = self.getCurrCommand()
         self.moveHandtoPose(curr_command)
 
-    def handleControllerSelection(self):
-        """
-        Change Control method according to user selection
-        """
-        if self.hand_controller.currentText() == "Manual Control":
-            self.hbox_f1.setHidden(False)
-        elif self.hand_controller.currentText() == "Glove Control":
-            self.hbox_f1.setHidden(True)
 
     def handleHandSelectChange(self):
         """Change the UI labels accordingly with the selected robot hand.
