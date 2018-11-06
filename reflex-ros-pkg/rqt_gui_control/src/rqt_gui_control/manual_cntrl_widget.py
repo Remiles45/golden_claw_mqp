@@ -15,7 +15,7 @@ from std_msgs.msg import UInt16
 from os import listdir
 from os.path import isfile, join
 from calibration_widget import CalibrationWidget
-
+from glove_cntrl_widget import GloveWidget
 
 
 
@@ -31,8 +31,6 @@ class ManualHandControlWidget(QWidget):
         thread.start_new_thread(self.keyboardControl, ())
         #Reflex SF hand control
         self.command_pub = rospy.Publisher('/reflex_sf/command', Command, queue_size=1) #_position
-        #Data glove
-        rospy.Subscriber('/glove_data',Int16MultiArray, self.received_int)
         self.currentGrasp = []
         self.initUI()
         self.delete_waypoint = None
@@ -46,6 +44,17 @@ class ManualHandControlWidget(QWidget):
     def initUI(self):
 
 ################## Position Control GUI ########################################################################
+######### Automatic Hand Move ###################################################################################
+        #TODO: this may happen too fast? need to test on hand, make smooth like buddah
+        #Synchronize selected fingers
+        self.hbox_update_tick = QHBoxLayout()
+        self.live_update = QCheckBox("Turn on live update")
+        self.hbox_update_tick.addWidget(self.live_update)
+        self.hbox_update_tick.addStretch()
+        self.tick_update_state = 0
+        self.live_update.stateChanged.connect(lambda:self.tickchange(self.live_update))
+
+
 #Fingers: slider range 0 -> 200
         #Finger 1 row (F1)
         self.finger_label_1 = QLabel("Goal for f1")
@@ -183,31 +192,6 @@ class ManualHandControlWidget(QWidget):
         self.combo = QComboBox(self)
         self.combo.addItem("ReflexSF")
         self.combo.addItem("Soft Hand")
-############ Glove Section #############################################################################
-#TODO: fix basically everything related to the glove
-        self.glove_label = QLabel("Glove Interface")
-        self.tick_glove = QCheckBox("ON/OFF")
-        self.tick_glove_state = 0
-        self.tick_glove.stateChanged.connect(lambda:self.tickchange(self.tick_glove))
-
-        self.value_glove_1 = QLabel("x")
-        self.value_glove_1.setMaximumSize(80,20)
-
-        self.value_glove_2 = QLabel("x")
-        self.value_glove_2.setMaximumSize(80,20)
-
-        self.value_glove_3 = QLabel("x")
-        self.value_glove_3.setMaximumSize(80,20)
-
-        self.value_glove_4 = QLabel("x")
-        self.value_glove_4.setMaximumSize(80,20)
-
-        self.hbox_glove = QHBoxLayout()
-        self.hbox_glove.addWidget(self.tick_glove)
-        self.hbox_glove.addWidget(self.value_glove_1)
-        self.hbox_glove.addWidget(self.value_glove_2)
-        self.hbox_glove.addWidget(self.value_glove_3)
-        self.hbox_glove.addWidget(self.value_glove_4)
 
 ############ Manage Waypoint List ##############################################################################################
         self.listCommand = []
@@ -250,8 +234,6 @@ class ManualHandControlWidget(QWidget):
         self.list_control.addWidget(self.list_control_execute_waypoints)
         self.list_control.addWidget(self.list_control_delete_all)
 
-
-
         #calibration
         self.calibration = QHBoxLayout()
         self.calibrate_button = QPushButton("Calibrate Hand")
@@ -260,6 +242,7 @@ class ManualHandControlWidget(QWidget):
 ############ Adding Sections to GUI ####################################################
 #using the buttons defined above to create the GUI itself
         self.fbox = QFormLayout()
+        self.fbox.addRow(QLabel(""),self.hbox_update_tick)
         self.fbox.addRow(self.finger_label_1,self.hbox_f1)
         self.fbox.addRow(self.finger_label_2,self.hbox_f2)
         self.fbox.addRow(self.finger_label_3,self.hbox_f3)
@@ -273,7 +256,7 @@ class ManualHandControlWidget(QWidget):
         self.fbox.addRow(QLabel(""), self.file_control)
         self.fbox.addRow(QLabel(""), self.calibration)
         self.fbox.addRow(self.combo_label,self.combo)
-        self.fbox.addRow(self.glove_label,self.hbox_glove)
+        # self.fbox.addRow(self.glove_label,self.hbox_glove)
 
         # Connect signal when slider change to function respectively to change value of label
         self.finger_slider_1.valueChanged.connect(self.valuechange1)
@@ -281,6 +264,13 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_3.valueChanged.connect(self.valuechange3)
         self.finger_slider_4.valueChanged.connect(self.valuechange4)
         self.finger_slider_5.valueChanged.connect(self.valuechange5)
+
+        # connect slider to measure distance scrolled
+        self.finger_slider_1.sliderPressed.connect(self.storeValue)
+        self.finger_slider_2.sliderPressed.connect(self.storeValue)
+        self.finger_slider_3.sliderPressed.connect(self.storeValue)
+        self.finger_slider_4.sliderPressed.connect(self.storeValue)
+        self.finger_slider_5.sliderPressed.connect(self.storeValue)
 
         # Connect signal when slider has been released
         self.finger_slider_1.sliderReleased.connect(self.sliderRelease)
@@ -314,12 +304,6 @@ class ManualHandControlWidget(QWidget):
 ######### Set up window ###################################################################################
         #Set the widget to layout and show the widget
         self.setLayout(self.fbox)
-
-        self.setWindowTitle("Manual Hand Controller")
-        self.resize(640,480)
-        self.dumbnum = 0
-        self.show()
-        self.current_angle = [0.0,0.0,0.0,0.0]
 
 #############################################################################################################
 #Actions for when you right click on a waypoint in the list
@@ -379,62 +363,39 @@ class ManualHandControlWidget(QWidget):
         self.addWaypoint(is_below=-1, cmd=Command(pose=slider_pose,velocity=velocity0))#desired_pose=slider_pose)
 
     #Send waypoints from existing waypoint list to the robotic hand
-    #TODO: rework glove interface -- add record/stop recording button to save live grasp data to file
-    #wait..... why is glove control in execute waypoints????? shouldnt it be in save? or totally separate?
     def handle_execute_waypoints(self):
-        scaled_float_1 = 1.0
-        scaled_float_2 = 1.0
-        scaled_float_3 = 1.0
-
-        if (self.tick_glove_state == 1):
-            #needs to be reworked
-            self.value_glove_1.setText("%2.2f" % scaled_float_1)
-            self.value_glove_2.setText("%2.2f" % scaled_float_2)
-            self.value_glove_3.setText("%2.2f" % scaled_float_3)
-            data = str(scaled_float_1) + ";" +str(scaled_float_2) + ";" + str(scaled_float_3) + "\n"
-            filename = "data/grasp1.txt"# I dont think this should be here?
-            file = open(filename, "a")
-            file.write(data)
-            file.close()
-        else:
-            for command in self.listCommand:
-                self.moveHandtoPose(command)#.pose, command.velocity)
+        for command in self.listCommand:
+            self.moveHandtoPose(command)
 
 #############################################################################################################
-    #Save waypoint list to a grasp file
-    # def handle_save_file(self):
-    #     filepath = QFileDialog.getSaveFileName(self, 'Save File', FILE_DIR)[0]
-    #     name = os.path.basename(filepath)
-    #     #write waypoint list to file
-    #     if not filepath:
-    #         return
-    #     if self.listCommand:
-    #         print 'saved ' + str(len(self.listCommand)) + ' waypoints to ' + name
-    #         with open(filepath, 'w') as file:
-    #             for point in self.listCommand:
-    #                 #add indicator for each chunk of data
-    #                 data = "//" + str(point)
-    #                 file.write(data)
-    #     else:
-    #         error_msg = QErrorMessage(self)
-    #         error_msg.setWindowTitle("File Save Error")
-    #         error_msg.showMessage("No waypoints to save")
-    #
-    #     self.filename.append(name)
-    #     item = QListWidgetItem(name)
-    #     self.fileListWidget.addItem(item)
-
     #Read waypoints from grasp file and send pose messages to robotic hand
     def handle_run_existing_grasp_button(self):
         fileData = self.readFile()
         for pose in fileData:
-            self.moveHandtoPose(pose)#f1=pose.f1,f2=pose.f2,f3=pose.f3,k1=pose.k1,k2=pose.k2)
-
+            self.moveHandtoPose(pose)
 
 ######### valuechange for updating goal label ###############################################################
+
+    def sliderRelease(self):
+        if(self.tick_f1_state == 1):
+            self.handleButtonGo()
+
+    def storeValue(self):
+        self.f1_ref = self.finger_slider_1.value()
+        self.f2_ref = self.finger_slider_2.value()
+        self.f3_ref = self.finger_slider_3.value()
+        self.f4_ref = self.finger_slider_4.value()
+        self.f5_ref = self.finger_slider_5.value()
+
+
 #Coupling of fingers, updating finger slider values
     def valuechange1(self):
-        float_value = float(self.finger_slider_1.value())/100.0
+        curr_value = float(self.finger_slider_1.value())
+        float_value = curr_value/100.0
+        diff = abs(self.f1_ref - curr_value)
+        if((self.tick_update_state == 1) and (diff >= 10)):
+            self.f1_ref = curr_value
+            self.handleButtonGo()
         self.value_slider_1.setText("%2.2f" % float_value)
         if self.tick_f1_state:
             if self.tick_f2_state:
@@ -447,12 +408,14 @@ class ManualHandControlWidget(QWidget):
                 self.value_slider_4.setText("%2.2f" % float_value)
                 self.finger_slider_4.setValue(self.finger_slider_1.value())
 
-    def sliderRelease(self):
-        self.handleButtonGo()
-
 
     def valuechange2(self):
-        float_value = float(self.finger_slider_2.value())/100.0
+        curr_value = float(self.finger_slider_2.value())
+        float_value = curr_value/100.0
+        diff = abs(self.f2_ref - curr_value)
+        if((self.tick_update_state == 1) and (diff >= 10)):
+            self.f2_ref = curr_value
+            self.handleButtonGo()
         self.value_slider_2.setText("%2.2f" % float_value)
         if self.tick_f2_state:
             if self.tick_f1_state:
@@ -467,7 +430,12 @@ class ManualHandControlWidget(QWidget):
 
 
     def valuechange3(self):
-        float_value = float(self.finger_slider_3.value())/100.0
+        curr_value = float(self.finger_slider_3.value())
+        float_value = curr_value/100.0
+        diff = abs(self.f3_ref - curr_value)
+        if((self.tick_update_state == 1) and (diff >= 10)):
+            self.f3_ref = curr_value
+            self.handleButtonGo()
         self.value_slider_3.setText("%2.2f" % float_value)
         if self.tick_f3_state:
             if self.tick_f1_state:
@@ -483,7 +451,12 @@ class ManualHandControlWidget(QWidget):
     def valuechange4(self):
         """This should only work for the softhand
         """
-        float_value = float(self.finger_slider_4.value())/100.0
+        curr_value = float(self.finger_slider_4.value())
+        float_value = curr_value/100.0
+        diff = abs(self.f4_ref - curr_value)
+        if((self.tick_update_state == 1) and (diff >= 10)):
+            self.f4_ref = curr_value
+            self.handleButtonGo()
         self.value_slider_4.setText("%2.2f" % float_value)
         if self.tick_f4_state and self.tick_f4.isVisible():
             if self.tick_f1_state:
@@ -497,7 +470,12 @@ class ManualHandControlWidget(QWidget):
                 self.finger_slider_3.setValue(self.finger_slider_4.value())
 
     def valuechange5(self):
-        float_value = float(self.finger_slider_5.value())/100.0
+        curr_value = float(self.finger_slider_5.value())
+        float_value = curr_value/100.0
+        diff = abs(self.f5_ref - curr_value)
+        if((self.tick_update_state == 1) and (diff >= 10)):
+            self.f5_ref = curr_value
+            self.handleButtonGo()
         self.value_slider_5.setText("%2.2f" % float_value)
 
 #########################################1####################################################################
@@ -522,15 +500,11 @@ class ManualHandControlWidget(QWidget):
                 self.tick_f4_state = 1
             else:
                 self.tick_f4_state = 0
-        if b.text() == "ON/OFF":
-            if b.isChecked() == True:
-                self.tick_glove_state = 1
+        if b.text() == "Turn on live update":
+            if b.isChecked():
+                self.tick_update_state = 1
             else:
-                self.tick_glove_state = 0
-                self.value_glove_1.setText("x")
-                self.value_glove_2.setText("x")
-                self.value_glove_3.setText("x")
-
+                self.tick_update_state = 0
 ######### Command Button handler ############################################################################
     #Send current slider position to the robotic hand
     def handleButtonGo(self):
@@ -616,15 +590,6 @@ class ManualHandControlWidget(QWidget):
         item = QListWidgetItem(name)
         self.fileListWidget.addItem(item)
 
-
-    ## Update Value of the hand for checking for waypoint
-    #but bruh why? what is the point. why you do this.
-    # def hand_state_cb(self, hand):
-    #     self.current_angle[0] = hand.motor[0].joint_angle
-    #     self.current_angle[1] = hand.motor[1].joint_angle
-    #     self.current_angle[2] = hand.motor[2].joint_angle
-    #     self.current_angle[3] = hand.motor[3].joint_angle
-
     #Send desired pose to the soft robotic hand
     def softHand_pose(self,f1,f2,f3,f4):
         f1 = 100 if int(f1) > 100 else int(f1)
@@ -636,35 +601,6 @@ class ManualHandControlWidget(QWidget):
         self.command_pub_softhand_3.publish(f3)
         self.command_pub_softhand_4.publish(f4)
 
-    # Receive messages from data glove
-    def received_int(self, value_received):
-        #Callback for Glove MSGs
-        #TODO figure out wtf is going on here
-        scaled_float_1 = 2.0-(float(value_received.data[0])-450.0)/100.0
-        scaled_float_2 = 2.0-(float(value_received.data[1])-500.0)/80.0
-        scaled_float_3 = 2.0 - (float(value_received.data[2])-440)/80.0
-
-
-        if (self.tick_glove_state == 1):
-            # Scale raw value into readable value
-            self.value_glove_1.setText("%2.2f" % scaled_float_1)
-            self.value_glove_2.setText("%2.2f" % scaled_float_2)
-            self.value_glove_3.setText("%2.2f" % scaled_float_3)
-            data = str(scaled_float_1) + ";" +str(scaled_float_2) + ";" + str(scaled_float_3) + "\n"
-            #why are they writing to a file????????? wtf is going on here. Im so confused
-            filename = "data/grasp1.txt"
-            file = open(filename, "a")
-            file.write(data)
-            file.close()
-            tar_f1 = scaled_float_2
-            tar_f2 = scaled_float_3
-            tar_f3 = scaled_float_1
-            tar_k1 = float(self.value_slider_4.toPlainText())
-            tar_k2 = float(self.value_slider_5.toPlainText())
-            desired_pose = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_f4,k2=tar_k2)
-            vel = VelocityCommand(f1=0.1,f2=0.1,f3=0.1,k1=0.1,k2=0.1)
-            cmd = Command(pose=desired_pose,velocity=vel)
-            self.moveHandtoPose(command=cmd) #desired_pose, velocity0)
 
 
 
