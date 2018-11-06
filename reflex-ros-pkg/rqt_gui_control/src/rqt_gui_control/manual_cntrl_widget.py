@@ -2,16 +2,20 @@ import os
 import sys
 import rospkg
 import rospy
+import keyboard
+import thread
+
+
 from python_qt_binding.QtWidgets import *
 from python_qt_binding.QtGui import *
 from PyQt5.QtCore import QEvent, Qt, QTimeLine, QTimer
 from std_msgs.msg import Int16MultiArray
-from reflex_msgs.msg import PoseCommand
+from reflex_msgs.msg import PoseCommand, Command, VelocityCommand
 from std_msgs.msg import UInt16
 from os import listdir
 from os.path import isfile, join
 from calibration_widget import CalibrationWidget
-
+from glove_cntrl_widget import GloveWidget
 
 
 
@@ -21,11 +25,12 @@ class ManualHandControlWidget(QWidget):
 
 
     def __init__(self):
+        self.rate = rospy.Rate(2)
         super(ManualHandControlWidget, self).__init__()
+        #Enabling Keyboard Control
+        thread.start_new_thread(self.keyboardControl, ())
         #Reflex SF hand control
-        self.command_pub = rospy.Publisher('/reflex_sf/command_position', PoseCommand, queue_size=1)
-        #Data glove
-        rospy.Subscriber('/glove_data',Int16MultiArray, self.received_int)
+        self.command_pub = rospy.Publisher('/reflex_sf/command', Command, queue_size=1) #_position
         self.currentGrasp = []
         self.initUI()
         self.delete_waypoint = None
@@ -39,6 +44,17 @@ class ManualHandControlWidget(QWidget):
     def initUI(self):
 
 ################## Position Control GUI ########################################################################
+######### Automatic Hand Move ###################################################################################
+        #TODO: this may happen too fast? need to test on hand, make smooth like buddah
+        #Synchronize selected fingers
+        self.hbox_update_tick = QHBoxLayout()
+        self.live_update = QCheckBox("Turn on live update")
+        self.hbox_update_tick.addWidget(self.live_update)
+        self.hbox_update_tick.addStretch()
+        self.tick_update_state = 0
+        self.live_update.stateChanged.connect(lambda:self.tickchange(self.live_update))
+
+
 #Fingers: slider range 0 -> 200
         #Finger 1 row (F1)
         self.finger_label_1 = QLabel("Goal for f1")
@@ -51,6 +67,7 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_1.setMaximumSize(80,20)
         self.f1_speed = QDoubleSpinBox()
         self.f1_speed.setSingleStep(0.05)
+        self.f1_speed.setValue(0.05)
         self.hbox_f1 = QHBoxLayout()
         self.hbox_f1.addWidget(self.finger_slider_1)
         self.hbox_f1.addWidget(self.value_slider_1)
@@ -68,6 +85,7 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_2.setMaximumSize(80,20)
         self.f2_speed = QDoubleSpinBox()
         self.f2_speed.setSingleStep(0.05)
+        self.f2_speed.setValue(0.05)
         self.hbox_f2 = QHBoxLayout()
         self.hbox_f2.addWidget(self.finger_slider_2)
         self.hbox_f2.addWidget(self.value_slider_2)
@@ -85,6 +103,7 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_3.setMaximumSize(80,20)
         self.f3_speed = QDoubleSpinBox()
         self.f3_speed.setSingleStep(0.05)
+        self.f3_speed.setValue(0.05)
         self.hbox_f3 = QHBoxLayout()
         self.hbox_f3.addWidget(self.finger_slider_3)
         self.hbox_f3.addWidget(self.value_slider_3)
@@ -103,6 +122,7 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_4.setMaximumSize(80,20)
         self.f4_speed = QDoubleSpinBox()
         self.f4_speed.setSingleStep(0.05)
+        self.f4_speed.setValue(0.05)
         self.hbox_f4 = QHBoxLayout()
         self.hbox_f4.addWidget(self.finger_slider_4)
         self.hbox_f4.addWidget(self.value_slider_4)
@@ -122,6 +142,7 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_5.setMaximumSize(80,20)
         self.f5_speed = QDoubleSpinBox()
         self.f5_speed.setSingleStep(0.05)
+        self.f5_speed.setValue(0.05)
         self.hbox_f5 = QHBoxLayout()
         self.hbox_f5.addWidget(self.finger_slider_5)
         self.hbox_f5.addWidget(self.value_slider_5)
@@ -171,55 +192,33 @@ class ManualHandControlWidget(QWidget):
         self.combo = QComboBox(self)
         self.combo.addItem("ReflexSF")
         self.combo.addItem("Soft Hand")
-############ Glove Section #############################################################################
-#TODO: fix basically everything related to the glove
-        self.glove_label = QLabel("Glove Interface")
-        self.tick_glove = QCheckBox("ON/OFF")
-        self.tick_glove_state = 0
-        self.tick_glove.stateChanged.connect(lambda:self.tickchange(self.tick_glove))
-
-        self.value_glove_1 = QLabel("x")
-        self.value_glove_1.setMaximumSize(80,20)
-
-        self.value_glove_2 = QLabel("x")
-        self.value_glove_2.setMaximumSize(80,20)
-
-        self.value_glove_3 = QLabel("x")
-        self.value_glove_3.setMaximumSize(80,20)
-
-        self.value_glove_4 = QLabel("x")
-        self.value_glove_4.setMaximumSize(80,20)
-
-        self.hbox_glove = QHBoxLayout()
-        self.hbox_glove.addWidget(self.tick_glove)
-        self.hbox_glove.addWidget(self.value_glove_1)
-        self.hbox_glove.addWidget(self.value_glove_2)
-        self.hbox_glove.addWidget(self.value_glove_3)
-        self.hbox_glove.addWidget(self.value_glove_4)
 
 ############ Manage Waypoint List ##############################################################################################
-        self.listPose = []
+        self.listCommand = []
         self.grasplist = []
         self.filename = []
         #initial point at conceptual home position (thumb in center position)
-        pose0 = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
-        self.listPose.append(pose0)
+        self.pose0 = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
+        self.velocity0 = VelocityCommand(f1=1,f2=1,f3=1,k1=1,k2=1)
+        command0 = Command(pose=self.pose0, velocity=self.velocity0)
+        self.listCommand.append(command0)
         #Display waypoints and files
         self.listWidget = QListWidget()
         self.fileListWidget = QListWidget()
-        # self.populate_poselist()
         self.listWidget.installEventFilter(self)#######################################################3
         self.populate_filelist()
-        self.populate_poselist()
+        self.populate_commandlist()
 
         self.fileslabel = QLabel("Grasp Files")
         self.listlabel = QLabel("List waypoint")
 
         # Options for File List
         self.file_control = QHBoxLayout()
+        self.save_file_button = QPushButton("Save to File")
         self.file_load_button = QPushButton("Load File into Waypoint List")
         self.file_execute_button = QPushButton("Execute File")
         self.file_control.addWidget(self.file_load_button)
+        self.file_control.addWidget(self.save_file_button)
         self.file_control.addWidget(self.file_execute_button)
 
         #List Control
@@ -235,8 +234,6 @@ class ManualHandControlWidget(QWidget):
         self.list_control.addWidget(self.list_control_execute_waypoints)
         self.list_control.addWidget(self.list_control_delete_all)
 
-
-
         #calibration
         self.calibration = QHBoxLayout()
         self.calibrate_button = QPushButton("Calibrate Hand")
@@ -245,6 +242,7 @@ class ManualHandControlWidget(QWidget):
 ############ Adding Sections to GUI ####################################################
 #using the buttons defined above to create the GUI itself
         self.fbox = QFormLayout()
+        self.fbox.addRow(QLabel(""),self.hbox_update_tick)
         self.fbox.addRow(self.finger_label_1,self.hbox_f1)
         self.fbox.addRow(self.finger_label_2,self.hbox_f2)
         self.fbox.addRow(self.finger_label_3,self.hbox_f3)
@@ -258,7 +256,7 @@ class ManualHandControlWidget(QWidget):
         self.fbox.addRow(QLabel(""), self.file_control)
         self.fbox.addRow(QLabel(""), self.calibration)
         self.fbox.addRow(self.combo_label,self.combo)
-        self.fbox.addRow(self.glove_label,self.hbox_glove)
+        # self.fbox.addRow(self.glove_label,self.hbox_glove)
 
         # Connect signal when slider change to function respectively to change value of label
         self.finger_slider_1.valueChanged.connect(self.valuechange1)
@@ -266,6 +264,21 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_3.valueChanged.connect(self.valuechange3)
         self.finger_slider_4.valueChanged.connect(self.valuechange4)
         self.finger_slider_5.valueChanged.connect(self.valuechange5)
+
+        # connect slider to measure distance scrolled
+        self.finger_slider_1.sliderPressed.connect(self.storeValue)
+        self.finger_slider_2.sliderPressed.connect(self.storeValue)
+        self.finger_slider_3.sliderPressed.connect(self.storeValue)
+        self.finger_slider_4.sliderPressed.connect(self.storeValue)
+        self.finger_slider_5.sliderPressed.connect(self.storeValue)
+
+        # Connect signal when slider has been released
+        self.finger_slider_1.sliderReleased.connect(self.sliderRelease)
+        self.finger_slider_2.sliderReleased.connect(self.sliderRelease)
+        self.finger_slider_3.sliderReleased.connect(self.sliderRelease)
+        self.finger_slider_4.sliderReleased.connect(self.sliderRelease)
+        self.finger_slider_5.sliderReleased.connect(self.sliderRelease)
+
         # Add connect signal to Button Go, Cancel and Reset
         self.go_button.clicked.connect(self.handleButtonGo)
         self.home_button.clicked.connect(self.handleButtonHome)
@@ -280,6 +293,7 @@ class ManualHandControlWidget(QWidget):
         self.list_control_delete_all.clicked.connect(self.handle_delete_all)
         self.file_execute_button.clicked.connect(self.handle_run_existing_grasp_button)
         self.file_load_button.clicked.connect(self.handle_add_file_waypoints)
+        self.save_file_button.clicked.connect(self.handle_grasp_save_button)
 
         #incorporate the calibration widget if button is clicked
         self.calibrate_button.clicked.connect(self.handle_calibrate_widget)
@@ -290,12 +304,6 @@ class ManualHandControlWidget(QWidget):
 ######### Set up window ###################################################################################
         #Set the widget to layout and show the widget
         self.setLayout(self.fbox)
-
-        self.setWindowTitle("Manual Hand Controller")
-        self.resize(640,480)
-        self.dumbnum = 0
-        self.show()
-        self.current_angle = [0.0,0.0,0.0,0.0]
 
 #############################################################################################################
 #Actions for when you right click on a waypoint in the list
@@ -315,18 +323,20 @@ class ManualHandControlWidget(QWidget):
             #execute actions
             action = menu.exec_(event.globalPos())
             slider_pose = self.getSliderPose()
+            vel = self.getVelocity()
+            des_cmd = Command(pose=slider_pose,velocity=vel)
             if action == addWaypointAbove:
-                self.addWaypoint(is_below=False,desired_pose=slider_pose)
+                self.addWaypoint(is_below=False,cmd=des_cmd)
             if action == addWaypointBelow:
-                self.addWaypoint(is_below=True,desired_pose=slider_pose)
+                self.addWaypoint(is_below=True,cmd=des_cmd)
             if action == addDelayAbove:
                 delay = self.getDelay()
                 if delay != False: #if the delay was not canceled during prompt
-                    self.addWaypoint(is_below=False,desired_pose=delay)
+                    self.addWaypoint(is_below=False,cmd=delay)
             if action == addDelayBelow:
                 delay = self.getDelay()
                 if delay != False:
-                    self.addWaypoint(is_below=True,desired_pose=delay)
+                    self.addWaypoint(is_below=True,cmd=delay)
             if action == deleteWaypoint:
                 self.deleteWaypoint(self.listWidget.currentRow())
 
@@ -343,71 +353,49 @@ class ManualHandControlWidget(QWidget):
         confirm_msg = "Are you sure you want to delete all waypoints?"
         response = QMessageBox.question(self,'Confirm Action', confirm_msg, QMessageBox.Yes, QMessageBox.No)
         if response == QMessageBox.Yes:
-            while len(self.listPose) > 0:
+            while len(self.listCommand) > 0:
                 self.deleteWaypoint(0)
 
     #Save Current slider pose to waypoint list
     def handle_list_control_save_button(self):
         slider_pose = self.getSliderPose()
-        self.addWaypoint(is_below=-1, desired_pose=slider_pose)
+        velocity0 = self.getVelocity()
+        self.addWaypoint(is_below=-1, cmd=Command(pose=slider_pose,velocity=velocity0))#desired_pose=slider_pose)
 
     #Send waypoints from existing waypoint list to the robotic hand
-    #TODO: rework glove interface -- add record/stop recording button to save live grasp data to file
-    #wait..... why is glove control in execute waypoints????? shouldnt it be in save? or totally separate?
     def handle_execute_waypoints(self):
-        scaled_float_1 = 1.0
-        scaled_float_2 = 1.0
-        scaled_float_3 = 1.0
-
-        if (self.tick_glove_state == 1):
-            #needs to be reworked
-            self.value_glove_1.setText("%2.2f" % scaled_float_1)
-            self.value_glove_2.setText("%2.2f" % scaled_float_2)
-            self.value_glove_3.setText("%2.2f" % scaled_float_3)
-            data = str(scaled_float_1) + ";" +str(scaled_float_2) + ";" + str(scaled_float_3) + "\n"
-            filename = "data/grasp1.txt"# I dont think this should be here?
-            file = open(filename, "a")
-            file.write(data)
-            file.close()
-        else:
-            for pose in self.listPose:
-                self.moveHandtoPose(pose)
+        for command in self.listCommand:
+            self.moveHandtoPose(command)
 
 #############################################################################################################
-    #Save waypoint list to a grasp file
-    def handle_grasp_save_button(self):
-        filepath = QFileDialog.getSaveFileName(self, 'Save File', FILE_DIR)[0]
-        name = os.path.basename(filepath)
-        #write waypoint list to file
-        if not filepath:
-            return
-        if self.listPose:
-            print 'saved ' + str(len(self.listPose)) + ' waypoints to ' + name
-            with open(filepath, 'w') as file:
-                for point in self.listPose:
-                    #add indicator for each chunk of data
-                    data = "//" + str(point)
-                    file.write(data)
-        else:
-            error_msg = QErrorMessage(self)
-            error_msg.setWindowTitle("File Save Error")
-            error_msg.showMessage("No waypoints to save")
-
-        self.filename.append(name)
-        item = QListWidgetItem(name)
-        self.fileListWidget.addItem(item)
-
     #Read waypoints from grasp file and send pose messages to robotic hand
     def handle_run_existing_grasp_button(self):
         fileData = self.readFile()
         for pose in fileData:
-            self.moveHandtoPose(pose)#f1=pose.f1,f2=pose.f2,f3=pose.f3,k1=pose.k1,k2=pose.k2)
-
+            self.moveHandtoPose(pose)
 
 ######### valuechange for updating goal label ###############################################################
+
+    def sliderRelease(self):
+        if(self.tick_f1_state == 1):
+            self.handleButtonGo()
+
+    def storeValue(self):
+        self.f1_ref = self.finger_slider_1.value()
+        self.f2_ref = self.finger_slider_2.value()
+        self.f3_ref = self.finger_slider_3.value()
+        self.f4_ref = self.finger_slider_4.value()
+        self.f5_ref = self.finger_slider_5.value()
+
+
 #Coupling of fingers, updating finger slider values
     def valuechange1(self):
-        float_value = float(self.finger_slider_1.value())/100.0
+        curr_value = float(self.finger_slider_1.value())
+        float_value = curr_value/100.0
+        diff = abs(self.f1_ref - curr_value)
+        if((self.tick_update_state == 1) and (diff >= 10)):
+            self.f1_ref = curr_value
+            self.handleButtonGo()
         self.value_slider_1.setText("%2.2f" % float_value)
         if self.tick_f1_state:
             if self.tick_f2_state:
@@ -420,8 +408,14 @@ class ManualHandControlWidget(QWidget):
                 self.value_slider_4.setText("%2.2f" % float_value)
                 self.finger_slider_4.setValue(self.finger_slider_1.value())
 
+
     def valuechange2(self):
-        float_value = float(self.finger_slider_2.value())/100.0
+        curr_value = float(self.finger_slider_2.value())
+        float_value = curr_value/100.0
+        diff = abs(self.f2_ref - curr_value)
+        if((self.tick_update_state == 1) and (diff >= 10)):
+            self.f2_ref = curr_value
+            self.handleButtonGo()
         self.value_slider_2.setText("%2.2f" % float_value)
         if self.tick_f2_state:
             if self.tick_f1_state:
@@ -436,7 +430,12 @@ class ManualHandControlWidget(QWidget):
 
 
     def valuechange3(self):
-        float_value = float(self.finger_slider_3.value())/100.0
+        curr_value = float(self.finger_slider_3.value())
+        float_value = curr_value/100.0
+        diff = abs(self.f3_ref - curr_value)
+        if((self.tick_update_state == 1) and (diff >= 10)):
+            self.f3_ref = curr_value
+            self.handleButtonGo()
         self.value_slider_3.setText("%2.2f" % float_value)
         if self.tick_f3_state:
             if self.tick_f1_state:
@@ -452,7 +451,12 @@ class ManualHandControlWidget(QWidget):
     def valuechange4(self):
         """This should only work for the softhand
         """
-        float_value = float(self.finger_slider_4.value())/100.0
+        curr_value = float(self.finger_slider_4.value())
+        float_value = curr_value/100.0
+        diff = abs(self.f4_ref - curr_value)
+        if((self.tick_update_state == 1) and (diff >= 10)):
+            self.f4_ref = curr_value
+            self.handleButtonGo()
         self.value_slider_4.setText("%2.2f" % float_value)
         if self.tick_f4_state and self.tick_f4.isVisible():
             if self.tick_f1_state:
@@ -466,7 +470,12 @@ class ManualHandControlWidget(QWidget):
                 self.finger_slider_3.setValue(self.finger_slider_4.value())
 
     def valuechange5(self):
-        float_value = float(self.finger_slider_5.value())/100.0
+        curr_value = float(self.finger_slider_5.value())
+        float_value = curr_value/100.0
+        diff = abs(self.f5_ref - curr_value)
+        if((self.tick_update_state == 1) and (diff >= 10)):
+            self.f5_ref = curr_value
+            self.handleButtonGo()
         self.value_slider_5.setText("%2.2f" % float_value)
 
 #########################################1####################################################################
@@ -491,21 +500,17 @@ class ManualHandControlWidget(QWidget):
                 self.tick_f4_state = 1
             else:
                 self.tick_f4_state = 0
-        if b.text() == "ON/OFF":
-            if b.isChecked() == True:
-                self.tick_glove_state = 1
+        if b.text() == "Turn on live update":
+            if b.isChecked():
+                self.tick_update_state = 1
             else:
-                self.tick_glove_state = 0
-                self.value_glove_1.setText("x")
-                self.value_glove_2.setText("x")
-                self.value_glove_3.setText("x")
-
+                self.tick_update_state = 0
 ######### Command Button handler ############################################################################
     #Send current slider position to the robotic hand
     def handleButtonGo(self):
         #send current slider values to hand
-        pose = self.getSliderPose()
-        self.moveHandtoPose(pose)
+        curr_command = self.getCurrCommand()
+        self.moveHandtoPose(curr_command)
 
 
     def handleHandSelectChange(self):
@@ -533,7 +538,9 @@ class ManualHandControlWidget(QWidget):
     #Reset fingers to home positions
     def handleButtonHome(self):
         pose = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
-        self.moveHandtoPose(pose)
+        vel = VelocityCommand(f1=0.05,f2=0.05,f3=0.05,k1=0.05,k2=0.05)
+        home_command = Command(pose=pose,velocity=vel)
+        self.moveHandtoPose(home_command)
 
 
     #Reset slider values to home positions
@@ -553,7 +560,7 @@ class ManualHandControlWidget(QWidget):
     def handle_add_file_waypoints(self):
         fileData = self.readFile()
         for pose in fileData:
-            self.addWaypoint(is_below=-1,desired_pose=pose)
+            self.addWaypoint(is_below=-1,cmd=pose)
 
     #Add Delay to waypoint list
     def handle_add_delay(self):
@@ -561,16 +568,27 @@ class ManualHandControlWidget(QWidget):
         if delay == False:
             return
         else:
-            self.addWaypoint(is_below=-1,desired_pose=delay)
+            self.addWaypoint(is_below=-1,cmd=delay)
 
 
-    ## Update Value of the hand for checking for waypoint
-    #but bruh why? what is the point. why you do this.
-    # def hand_state_cb(self, hand):
-    #     self.current_angle[0] = hand.motor[0].joint_angle
-    #     self.current_angle[1] = hand.motor[1].joint_angle
-    #     self.current_angle[2] = hand.motor[2].joint_angle
-    #     self.current_angle[3] = hand.motor[3].joint_angle
+    def handle_grasp_save_button(self):
+        #TODO prompt to edit filename/path
+        filepath = QFileDialog.getSaveFileName(self, 'Save File', FILE_DIR)[0]
+        name = os.path.basename(filepath)
+        #write waypoint list to file
+        if len(self.listCommand) > 0:
+            print 'saved ' + str(len(self.listCommand)) + ' waypoints to ' + name
+            with open(filepath, 'w') as file:
+                for point in self.listCommand:
+                    #add indicator for each chunk of data
+                    data = '//' + str(point.pose) + "***" + str(point.velocity)
+                    file.write(data)
+        else:
+            print "No waypoints to save"
+
+        self.filename.append(name)
+        item = QListWidgetItem(name)
+        self.fileListWidget.addItem(item)
 
     #Send desired pose to the soft robotic hand
     def softHand_pose(self,f1,f2,f3,f4):
@@ -583,33 +601,6 @@ class ManualHandControlWidget(QWidget):
         self.command_pub_softhand_3.publish(f3)
         self.command_pub_softhand_4.publish(f4)
 
-    # Receive messages from data glove
-    def received_int(self, value_received):
-        #Callback for Glove MSGs
-        #TODO figure out wtf is going on here
-        scaled_float_1 = 2.0-(float(value_received.data[0])-450.0)/100.0
-        scaled_float_2 = 2.0-(float(value_received.data[1])-500.0)/80.0
-        scaled_float_3 = 2.0 - (float(value_received.data[2])-440)/80.0
-
-
-        if (self.tick_glove_state == 1):
-            # Scale raw value into readable value
-            self.value_glove_1.setText("%2.2f" % scaled_float_1)
-            self.value_glove_2.setText("%2.2f" % scaled_float_2)
-            self.value_glove_3.setText("%2.2f" % scaled_float_3)
-            data = str(scaled_float_1) + ";" +str(scaled_float_2) + ";" + str(scaled_float_3) + "\n"
-            #why are they writing to a file????????? wtf is going on here. Im so confused
-            filename = "data/grasp1.txt"
-            file = open(filename, "a")
-            file.write(data)
-            file.close()
-            tar_f1 = scaled_float_2
-            tar_f2 = scaled_float_3
-            tar_f3 = scaled_float_1
-            tar_k1 = float(self.value_slider_4.toPlainText())
-            tar_k2 = float(self.value_slider_5.toPlainText())
-            desired_pose = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_f4,k2=tar_k2)
-            self.moveHandtoPose(desired_pose)
 
 
 
@@ -628,27 +619,31 @@ class ManualHandControlWidget(QWidget):
         k1 = pose.k1 == 999
         return f1 and f2 and f3 and k1
 
-    def populate_poselist(self):
+    def populate_commandlist(self):
         count = 1
         self.listWidget.clear()
-        for pose in self.listPose:
-            if not self.is_delay(pose):
-                item = QListWidgetItem("%d. [  '%2.2f'  ,  '%2.2f'  ,  '%2.2f'  ,  '%2.2f',  '%2.2f'  ]" % (count, pose.f1,pose.f2,pose.f3,pose.k1,pose.k2-1))
+        for command in self.listCommand:
+            if not self.is_delay(command.pose):
+                pose = command.pose
+                vel = command.velocity
+                pose_str = "Pose: [  %2.2f,  %2.2f,  %2.2f,  %2.2f,  %2.2f  ]"%(pose.f1,pose.f2,pose.f3,pose.k1,pose.k2-1)
+                velocity_str = "Velocity: [  %2.2f,  %2.2f,  %2.2f,  %2.2f,  %2.2f  ]"%(vel.f1,vel.f2,vel.f3,vel.k1,vel.k2)
+                item = QListWidgetItem("%d.  %s %s"%(count, pose_str, velocity_str))
             else:
-                item = QListWidgetItem("%d. %.2f second delay" % (count, pose.k2))
+                item = QListWidgetItem("%d. %.2f second delay" % (count, command.pose.k2))
             self.listWidget.addItem(item)
             count += 1
 
 
     def deleteWaypoint(self, point_sel):
-        if (self.listPose != []):
+        if (self.listCommand != []):
             if (point_sel < 0):
                 error_msg1 = QErrorMessage(self)
                 error_msg1.setWindowTitle("Waypoint Error")
                 error_msg1.showMessage("Please select a valid waypoint to remove")
             else:
-                self.listPose.pop(point_sel)
-                self.populate_poselist()
+                self.listCommand.pop(point_sel)
+                self.populate_commandlist()
         else:
             error_msg2 = QErrorMessage(self)
             error_msg2.setWindowTitle("Waypoint Error")
@@ -656,15 +651,15 @@ class ManualHandControlWidget(QWidget):
 
 
 
-    def addWaypoint(self, is_below, desired_pose):
+    def addWaypoint(self, is_below, cmd):
         # is below = true if waypoint is desired to be below selected row, above if desired to be above, -1 if desired at end of list
         if is_below < 0:
-            self.listPose.append(desired_pose)
-            self.populate_poselist()
+            self.listCommand.append(cmd)
+            self.populate_commandlist()
         else:
             list_location = int(self.listWidget.currentRow()) + is_below
-            self.listPose.insert(list_location, desired_pose)
-            self.populate_poselist()
+            self.listCommand.insert(list_location, cmd)
+            self.populate_commandlist()
 
 
 
@@ -679,18 +674,27 @@ class ManualHandControlWidget(QWidget):
             file = open(file_path,'r').read()
             # Divide file into poses
             data_chunks = file.split('//')
-            for pose in data_chunks:
-                if len(pose) > 1:
+            data_chunks.pop(0) #the file gets saved with an extra // trigger
+            for command in data_chunks:
+                p_or_v = command.split('***')
+                cnt = 0
+                for test in p_or_v:
                     # divide each pose up by commands per finger
-                    f1,f2,f3,k1,k2 = pose.split('\n')
+                    f1,f2,f3,k1,k2 = test.split('\n')
                     # choose only the numerical chunk of command and convert to float
                     tar_f1 = float(f1.split(': ')[1])
                     tar_f2 = float(f2.split(': ')[1])
                     tar_f3 = float(f3.split(': ')[1])
                     tar_k1 = float(k1.split(': ')[1])
                     tar_k2 = float(k2.split(': ')[1])
-                    pose0 = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=tar_k2)
-                    pose_list.append(pose0)
+                    if cnt == 0:
+                        pose0 = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=tar_k2)
+                        cnt = cnt + 1
+                    else:
+                        velocity0 = VelocityCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=tar_k2)
+
+                cmd = Command(pose=pose0,velocity=velocity0)
+                pose_list.append(cmd)
             return pose_list
         except AttributeError:
             error_msg = QErrorMessage(self)
@@ -704,32 +708,66 @@ class ManualHandControlWidget(QWidget):
 
 
 #Send robot hand to desired position
-    def moveHandtoPose(self, poseTarget):
+    def moveHandtoPose(self, command):
+        poseTarget = command.pose
         if self.is_delay(poseTarget):
             rospy.sleep(poseTarget.k2)
         else:
             if self.combo.currentText() == "ReflexSF":
-                self.command_pub.publish(poseTarget)
+                self.command_pub.publish(command)
             elif self.combo.currentText() == "Soft Hand":
                 self.softHand_pose(f1=poseTarget.f1*50,f2=poseTarget.f2*50,f3=poseTarget.f3*50,f4=poseTarget.k1*50)
             rospy.sleep(0.2)
 
+    def getCurrCommand(self):
+        pose = self.getSliderPose()
+        vel = self.getVelocity()
+        return Command(pose=pose,velocity=vel)
     #return current pose with respect to slider values
     def getSliderPose(self):
         # record slider values
-        float_value_1 = float(self.value_slider_1.toPlainText())
-        float_value_2 = float(self.value_slider_2.toPlainText())
-        float_value_3 = float(self.value_slider_3.toPlainText())
-        float_value_4 = float(self.value_slider_4.toPlainText())
-        float_value_5 = float(self.value_slider_5.toPlainText())
+        float_value_1 = float(self.value_slider_1.text())
+        float_value_2 = float(self.value_slider_2.text())
+        float_value_3 = float(self.value_slider_3.text())
+        float_value_4 = float(self.value_slider_4.text())
+        float_value_5 = float(self.value_slider_5.text())
         pose0 = PoseCommand(f1=float_value_1,f2=float_value_2,f3=float_value_3,k1=float_value_4,k2=1+float_value_5)
         return pose0
+
+    def getVelocity(self):
+        val1 = float(self.f1_speed.value())
+        val2 = float(self.f2_speed.value())
+        val3 = float(self.f3_speed.value())
+        val4 = float(self.f4_speed.value())
+        val5 = float(self.f5_speed.value())
+        velocity = VelocityCommand(f1=val1,f2=val2,f3=val3,k1=val4,k2=val5)
+        return velocity
 
     #prompt for delay input
     def getDelay(self):
         num,ok = QInputDialog.getDouble(self,"Delay", "Delay in seconds")
         if ok:
           pose0 = PoseCommand(f1=999,f2=999,f3=999,k1=999,k2=num)
-          return pose0
+          vel0 = VelocityCommand(f1=999,f2=999,f3=999,k1=999,k2=num)
+          return Command(pose=pose0,velocity=vel0)
         else:
           return False
+
+    def keyboardControl(self):
+        while True:
+            if keyboard.is_pressed('d'):
+                pose0 = PoseCommand(f1=0.5,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
+                velocity0 = VelocityCommand(f1=3,f2=0,f3=0,k1=0,k2=0)
+                self.moveHandtoPose(Command(pose=pose0,velocity=velocity0))#pose0, velocity0)
+                self.rate.sleep()
+                pose0 = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
+                velocity0 = VelocityCommand(f1=3,f2=0,f3=0,k1=0,k2=0)
+                self.moveHandtoPose(Command(pose=pose0,velocity=velocity0))#pose0, velocity0)
+            if keyboard.is_pressed('f'):
+                pose0 = PoseCommand(f1=0.0,f2=0.5,f3=0.0,k1=0.0,k2=1.0)
+                velocity0 = VelocityCommand(f1=0,f2=3,f3=0,k1=0,k2=0)
+                self.moveHandtoPose(Command(pose=pose0,velocity=velocity0))#pose0, velocity0)
+                self.rate.sleep()
+                pose0 = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
+                velocity0 = VelocityCommand(f1=0,f2=3,f3=0,k1=0,k2=0)
+                self.moveHandtoPose(Command(pose=pose0,velocity=velocity0))#pose0, velocity0)
