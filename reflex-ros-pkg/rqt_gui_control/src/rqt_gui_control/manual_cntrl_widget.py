@@ -2,9 +2,6 @@ import os
 import sys
 import rospkg
 import rospy
-import keyboard
-import thread
-
 
 from python_qt_binding.QtWidgets import *
 from python_qt_binding.QtGui import *
@@ -16,9 +13,10 @@ from os import listdir
 from os.path import isfile, join
 from calibration_widget import CalibrationWidget
 from glove_cntrl_widget import GloveWidget
+from file_wr import FileWriteRead
 
 
-
+file = FileWriteRead()
 rospack = rospkg.RosPack()
 FILE_DIR = rospack.get_path('rqt_gui_control') + '/data'
 class ManualHandControlWidget(QWidget):
@@ -27,8 +25,6 @@ class ManualHandControlWidget(QWidget):
     def __init__(self):
         self.rate = rospy.Rate(2)
         super(ManualHandControlWidget, self).__init__()
-        #Enabling Keyboard Control
-        thread.start_new_thread(self.keyboardControl, ())
         #Reflex SF hand control
         self.command_pub = rospy.Publisher('/reflex_sf/command', Command, queue_size=1) #_position
         self.currentGrasp = []
@@ -40,6 +36,8 @@ class ManualHandControlWidget(QWidget):
         self.command_pub_softhand_3 = rospy.Publisher('UbirosGentlePro3', UInt16, queue_size=1)
         self.command_pub_softhand_4 = rospy.Publisher('UbirosGentlePro4', UInt16, queue_size=1)
 
+        # self.filename = []
+        # self.fileListWidget = QListWidget()
 
     def initUI(self):
 
@@ -204,7 +202,7 @@ class ManualHandControlWidget(QWidget):
         self.listCommand.append(command0)
         #Display waypoints and files
         self.listWidget = QListWidget()
-        self.fileListWidget = QListWidget()
+        self.fileManagement = QListWidget()#FileWriteRead()#QListWidget()
         self.listWidget.installEventFilter(self)#######################################################3
         self.populate_filelist()
         self.populate_commandlist()
@@ -252,7 +250,7 @@ class ManualHandControlWidget(QWidget):
         self.fbox.addRow(self.command_label,self.hbox_command)
         self.fbox.addRow(self.listlabel, self.listWidget)
         self.fbox.addRow(self.list_control_label,self.list_control)
-        self.fbox.addRow(self.fileslabel, self.fileListWidget)
+        self.fbox.addRow(self.fileslabel, self.fileManagement)
         self.fbox.addRow(QLabel(""), self.file_control)
         self.fbox.addRow(QLabel(""), self.calibration)
         self.fbox.addRow(self.combo_label,self.combo)
@@ -558,9 +556,12 @@ class ManualHandControlWidget(QWidget):
 
     #Read waypoints from file and add to current waypoint list
     def handle_add_file_waypoints(self):
-        fileData = self.readFile()
-        for pose in fileData:
-            self.addWaypoint(is_below=-1,cmd=pose)
+        # read selected file
+        file_name = self.fileListWidget.currentItem().text()
+        fileData = file.readFile(file_name)
+        if(fileData is not None):
+            for pose in fileData:
+                self.addWaypoint(is_below=-1,cmd=pose)
 
     #Add Delay to waypoint list
     def handle_add_delay(self):
@@ -572,23 +573,24 @@ class ManualHandControlWidget(QWidget):
 
 
     def handle_grasp_save_button(self):
-        #TODO prompt to edit filename/path
-        filepath = QFileDialog.getSaveFileName(self, 'Save File', FILE_DIR)[0]
-        name = os.path.basename(filepath)
-        #write waypoint list to file
-        if len(self.listCommand) > 0:
-            print 'saved ' + str(len(self.listCommand)) + ' waypoints to ' + name
-            with open(filepath, 'w') as file:
-                for point in self.listCommand:
-                    #add indicator for each chunk of data
-                    data = '//' + str(point.pose) + "***" + str(point.velocity)
-                    file.write(data)
-        else:
-            print "No waypoints to save"
-
-        self.filename.append(name)
-        item = QListWidgetItem(name)
-        self.fileListWidget.addItem(item)
+        file.save_file(self.listCommand)
+        # #prompt to edit filename/path
+        # filepath = QFileDialog.getSaveFileName(self, 'Save File', FILE_DIR)[0]
+        # name = os.path.basename(filepath)
+        # #write waypoint list to file
+        # if len(self.listCommand) > 0:
+        #     print 'saved ' + str(len(self.listCommand)) + ' waypoints to ' + name
+        #     with open(filepath, 'w') as file:
+        #         for point in self.listCommand:
+        #             #add indicator for each chunk of data
+        #             data = '//' + str(point.pose) + "***" + str(point.velocity)
+        #             file.write(data)
+        # else:
+        #     print "No waypoints to save"
+        #
+        # self.filename.append(name)
+        # item = QListWidgetItem(name)
+        # self.fileListWidget.addItem(item)
 
     #Send desired pose to the soft robotic hand
     def softHand_pose(self,f1,f2,f3,f4):
@@ -607,10 +609,11 @@ class ManualHandControlWidget(QWidget):
 ########### Load File   ############################################################################
     #check data directory and display available grasp files to run
     def populate_filelist(self):
-        all_files = [f for f in listdir(FILE_DIR) if isfile(join(FILE_DIR, f))]
-        for f in all_files:
-            self.fileListWidget.addItem(QListWidgetItem(f))
-            self.filename.append(f)
+        file.populate_filelist()
+        # all_files = [f for f in listdir(FILE_DIR) if isfile(join(FILE_DIR, f))]
+        # for f in all_files:
+        #     self.fileListWidget.addItem(QListWidgetItem(f))
+        #     self.filename.append(f)
 
     def is_delay(self, pose):
         f1 = pose.f1 == 999
@@ -666,6 +669,7 @@ class ManualHandControlWidget(QWidget):
 
     #Read a Grasp File and return list of poses
     def readFile(self):
+        return file.readFile()
         pose_list = []
         try:
             # read selected file
@@ -752,22 +756,3 @@ class ManualHandControlWidget(QWidget):
           return Command(pose=pose0,velocity=vel0)
         else:
           return False
-
-    def keyboardControl(self):
-        while True:
-            if keyboard.is_pressed('d'):
-                pose0 = PoseCommand(f1=0.5,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
-                velocity0 = VelocityCommand(f1=3,f2=0,f3=0,k1=0,k2=0)
-                self.moveHandtoPose(Command(pose=pose0,velocity=velocity0))#pose0, velocity0)
-                self.rate.sleep()
-                pose0 = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
-                velocity0 = VelocityCommand(f1=3,f2=0,f3=0,k1=0,k2=0)
-                self.moveHandtoPose(Command(pose=pose0,velocity=velocity0))#pose0, velocity0)
-            if keyboard.is_pressed('f'):
-                pose0 = PoseCommand(f1=0.0,f2=0.5,f3=0.0,k1=0.0,k2=1.0)
-                velocity0 = VelocityCommand(f1=0,f2=3,f3=0,k1=0,k2=0)
-                self.moveHandtoPose(Command(pose=pose0,velocity=velocity0))#pose0, velocity0)
-                self.rate.sleep()
-                pose0 = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
-                velocity0 = VelocityCommand(f1=0,f2=3,f3=0,k1=0,k2=0)
-                self.moveHandtoPose(Command(pose=pose0,velocity=velocity0))#pose0, velocity0)
