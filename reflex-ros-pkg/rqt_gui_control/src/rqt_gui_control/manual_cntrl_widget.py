@@ -64,8 +64,8 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_1 = QLabel("0.00")
         self.value_slider_1.setMaximumSize(80,20)
         self.f1_speed = QDoubleSpinBox()
-        self.f1_speed.setSingleStep(0.05)
-        self.f1_speed.setValue(0.05)
+        self.f1_speed.setSingleStep(0.1)
+        self.f1_speed.setValue(0.5)
         self.hbox_f1 = QHBoxLayout()
         self.hbox_f1.addWidget(self.finger_slider_1)
         self.hbox_f1.addWidget(self.value_slider_1)
@@ -82,8 +82,8 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_2 = QLabel("0.00")
         self.value_slider_2.setMaximumSize(80,20)
         self.f2_speed = QDoubleSpinBox()
-        self.f2_speed.setSingleStep(0.05)
-        self.f2_speed.setValue(0.05)
+        self.f2_speed.setSingleStep(0.1)
+        self.f2_speed.setValue(0.5)
         self.hbox_f2 = QHBoxLayout()
         self.hbox_f2.addWidget(self.finger_slider_2)
         self.hbox_f2.addWidget(self.value_slider_2)
@@ -100,8 +100,8 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_3 = QLabel("0.00")
         self.value_slider_3.setMaximumSize(80,20)
         self.f3_speed = QDoubleSpinBox()
-        self.f3_speed.setSingleStep(0.05)
-        self.f3_speed.setValue(0.05)
+        self.f3_speed.setSingleStep(0.1)
+        self.f3_speed.setValue(0.5)
         self.hbox_f3 = QHBoxLayout()
         self.hbox_f3.addWidget(self.finger_slider_3)
         self.hbox_f3.addWidget(self.value_slider_3)
@@ -119,8 +119,8 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_4 = QLabel("0.00")
         self.value_slider_4.setMaximumSize(80,20)
         self.f4_speed = QDoubleSpinBox()
-        self.f4_speed.setSingleStep(0.05)
-        self.f4_speed.setValue(0.05)
+        self.f4_speed.setSingleStep(0.1)
+        self.f4_speed.setValue(0.5)
         self.hbox_f4 = QHBoxLayout()
         self.hbox_f4.addWidget(self.finger_slider_4)
         self.hbox_f4.addWidget(self.value_slider_4)
@@ -139,8 +139,8 @@ class ManualHandControlWidget(QWidget):
         self.value_slider_5 = QLabel("0.00")
         self.value_slider_5.setMaximumSize(80,20)
         self.f5_speed = QDoubleSpinBox()
-        self.f5_speed.setSingleStep(0.05)
-        self.f5_speed.setValue(0.05)
+        self.f5_speed.setSingleStep(0.1)
+        self.f5_speed.setValue(0.5)
         self.hbox_f5 = QHBoxLayout()
         self.hbox_f5.addWidget(self.finger_slider_5)
         self.hbox_f5.addWidget(self.value_slider_5)
@@ -375,7 +375,7 @@ class ManualHandControlWidget(QWidget):
 ######### valuechange for updating goal label ###############################################################
 
     def sliderRelease(self):
-        if(self.tick_f1_state == 1):
+        if(self.tick_update_state == 1):
             self.handleButtonGo()
 
     def storeValue(self):
@@ -394,6 +394,7 @@ class ManualHandControlWidget(QWidget):
         if((self.tick_update_state == 1) and (diff >= 10)):
             self.f1_ref = curr_value
             self.handleButtonGo()
+
         self.value_slider_1.setText("%2.2f" % float_value)
         if self.tick_f1_state:
             if self.tick_f2_state:
@@ -472,6 +473,7 @@ class ManualHandControlWidget(QWidget):
         float_value = curr_value/100.0
         diff = abs(self.f5_ref - curr_value)
         if((self.tick_update_state == 1) and (diff >= 10)):
+            print "going"
             self.f5_ref = curr_value
             self.handleButtonGo()
         self.value_slider_5.setText("%2.2f" % float_value)
@@ -536,7 +538,7 @@ class ManualHandControlWidget(QWidget):
     #Reset fingers to home positions
     def handleButtonHome(self):
         pose = PoseCommand(f1=0.0,f2=0.0,f3=0.0,k1=0.0,k2=1.0)
-        vel = VelocityCommand(f1=0.05,f2=0.05,f3=0.05,k1=0.05,k2=0.05)
+        vel = VelocityCommand(f1=1,f2=1,f3=1,k1=1,k2=1)
         home_command = Command(pose=pose,velocity=vel)
         self.moveHandtoPose(home_command)
 
