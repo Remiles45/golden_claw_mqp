@@ -43,7 +43,9 @@ void setup()
 //ref: https://answers.ros.org/question/37185/how-to-initialize-a-uint8multiarray-message/
 void loop()
 {
-  curr_f1_data = analogRead(F1_PIN);
+  int curr_f1_data = analogRead(F1_PIN);
+  int curr_f2_data = analogRead(F2_PIN);
+  int curr_f3_data = analogRead(F3_PIN);
   if (curr_f1_data > maximum){
     maximum = curr_f1_data;
   }

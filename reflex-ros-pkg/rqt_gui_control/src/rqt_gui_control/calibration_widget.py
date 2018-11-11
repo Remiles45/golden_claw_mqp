@@ -1,7 +1,7 @@
 import rospy
 import socket
-from python_qt_binding.QtWidgets import * #QWidget, QToolTip,QPushButton,QLabel,QGridLayout,QLineEdit
-from python_qt_binding.QtGui import * #QFont,QPalette, QColor
+from python_qt_binding.QtWidgets import *
+from python_qt_binding.QtGui import *
 
 from std_msgs.msg import String
 from reflex_msgs.msg import PoseCommand
@@ -64,8 +64,6 @@ class CalibrationWidget(QWidget):
         self.thumb_instruction = QLabel("\n\nRotate thumb to approximately -60 degrees with respect to the desired center position")
 
 
-
-
 ############ Adding rows and set up singal for button ####################################################
         #QFormLayout similar to HBox but you know it look like form, add everything to FormLayout
         self.fbox = QFormLayout()
@@ -100,9 +98,7 @@ class CalibrationWidget(QWidget):
 ######### Set up window ###################################################################################
         #Set the widget to layout and show the widget
         self.setLayout(self.fbox)
-
         self.setWindowTitle("Calibration")
-        # self.resize(640,400)
         self.dumbnum = 0
         self.show()
 
@@ -172,7 +168,6 @@ def calibrate_hand(self, finger_sel, loosen):
         rospy.wait_for_service('/send_two_int', timeout=2)
         send_two_int = rospy.ServiceProxy('/send_two_int', SendTwoInt)
         resp1 = send_two_int(finger_sel, loosen)
-        # print resp1
 
     except Exception:
         print("\nERROR: Could not communicate with hand. Check cable connection")

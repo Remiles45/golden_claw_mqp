@@ -7,11 +7,11 @@ from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import *
 from ui_design import *
 
-widget = QMainWindow() #QWidget()
+widget = QMainWindow()
 class RobotHandPlugin(Plugin):
     def __init__(self, context):
         super(RobotHandPlugin, self).__init__(context)
-        context.ui_design = TestClass()
+        context.ui_design = SetUpUI()
         context.add_widget(context.ui_design)
 
 

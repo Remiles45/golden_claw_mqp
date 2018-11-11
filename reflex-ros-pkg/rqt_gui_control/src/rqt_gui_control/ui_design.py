@@ -1,12 +1,11 @@
-
 from python_qt_binding.QtWidgets import *
 from manual_cntrl_widget import ManualHandControlWidget
 from glove_cntrl_widget import GloveWidget
 
 
-class TestClass(QMdiArea):#QMainWindow):
+class SetUpUI(QMdiArea):
     def __init__(self):
-        super(TestClass, self).__init__()
+        super(SetUpUI, self).__init__()
         self.manual = ManualHandControlWidget()
         self.auto = GloveWidget()
 
@@ -24,10 +23,7 @@ class TestClass(QMdiArea):#QMainWindow):
 
         self.setLayout(hbox)
         self.leftlist.currentRowChanged.connect(self.display)
-        self.setWindowTitle('Robotic Hand Controller')
         self.show()
-
-
 
     def display(self,i):
         self.stack.setCurrentIndex(i)

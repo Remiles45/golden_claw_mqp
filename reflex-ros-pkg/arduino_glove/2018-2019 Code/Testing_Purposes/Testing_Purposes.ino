@@ -1,6 +1,6 @@
 #include <SPI.h>
-#include <nRF24L01.h>
-#include <RF24.h>
+//#include <nRF24L01.h>
+//#include <RF24.h>
 
 const int F1_PIN = A0; // Pin connected to voltage divider output
 const int F2_PIN = A1; // Pin connected to voltage divider output
@@ -26,17 +26,17 @@ int minimumF3 = 10000;
 int rangeF3;
 int mappedValueF3;
 
-RF24 radio(7, 8); // CE, CSN
+//RF24 radio(7, 8); // CE, CSN
 
 const byte address[6] = "00001";
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
-  radio.begin();
-  radio.openWritingPipe(address);
-  radio.setPALevel(RF24_PA_MIN);
-  radio.stopListening();
+//  radio.begin();
+//  radio.openWritingPipe(address);
+//  radio.setPALevel(RF24_PA_MIN);
+//  radio.stopListening();
   
 
 
@@ -75,10 +75,14 @@ void loop() {
   mappedValueF2 = rangeF2 / maximumF2;
   mappedValueF3 = rangeF3 / maximumF3;
   curr_f1_data = analogRead(F1_PIN);
-  
+  int f1_data = map(curr_f1_data,minimumF1, maximumF1,0,200);
   const char text[] = "Sup?";
-  radio.write(&text, sizeof(text));
-  Serial.println(text);
+//  radio.write(&text, sizeof(text));
+  Serial.print("Range: ");
+  Serial.print(rangeF1);
+  Serial.print(" Mapped: ");
+  Serial.print(f1_data);
+  Serial.print("\n\n");
   delay(500);
   
   //Serial.println(curr_f1_data);
