@@ -473,7 +473,7 @@ class ManualHandControlWidget(QWidget):
 
     def liveUpdateCntrl(self):
         while(True):
-            if (self.live_update.isChecked()):
+            if (self.live_update.isChecked() and self.isVisible()):
                 vel = VelocityCommand(f1=1,f2=1,f3=1,k1=1,k2=1)
                 pos = self.getSliderPose()
                 self.moveHandtoPose(Command(pose=pos,velocity=vel))
