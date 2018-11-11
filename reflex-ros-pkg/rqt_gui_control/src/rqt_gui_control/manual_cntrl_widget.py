@@ -41,7 +41,12 @@ class ManualHandControlWidget(QWidget):
 
 
     def initUI(self):
-
+        slider_min = 0
+        slider_max = 200
+        spin_box_step = 0.1
+        spin_box_init = 0.5
+        spin_box_max = 2
+        speed_label = "Rad/Sec"
 ################## Position Control GUI ########################################################################
 ######### Automatic Hand Move ###################################################################################
         #TODO: this may happen too fast? need to test on hand, make smooth like buddah
@@ -55,74 +60,78 @@ class ManualHandControlWidget(QWidget):
         #Finger 1 row (F1)
         self.finger_label_1 = QLabel("Goal for f1")
         self.finger_slider_1 = QSlider(1)
-        self.finger_slider_1.setMinimum(0)
-        self.finger_slider_1.setMaximum(200)
-        self.finger_slider_1.setValue(0.00)
+        self.finger_slider_1.setMinimum(slider_min)
+        self.finger_slider_1.setMaximum(slider_max)
+        self.finger_slider_1.setValue(slider_min)
 
-        self.value_slider_1 = QLabel("0.00")
+        self.value_slider_1 = QLabel(str(slider_min))
         self.value_slider_1.setMaximumSize(80,20)
         self.f1_speed = QDoubleSpinBox()
-        self.f1_speed.setSingleStep(0.1)
-        self.f1_speed.setValue(0.5)
+        self.f1_speed.setSingleStep(spin_box_step)
+        self.f1_speed.setValue(spin_box_init)
+        self.f1_speed.setMaximum(spin_box_max)
         self.hbox_f1 = QHBoxLayout()
         self.hbox_f1.addWidget(self.finger_slider_1)
         self.hbox_f1.addWidget(self.value_slider_1)
         self.hbox_f1.addWidget(self.f1_speed)
-        self.hbox_f1.addWidget( QLabel("Rad/Sec"))
+        self.hbox_f1.addWidget( QLabel(speed_label))
 
         #Finger 2 row (F2)
         self.finger_label_2 = QLabel("Goal for f2")
         self.finger_slider_2 = QSlider(1)
-        self.finger_slider_2.setMinimum(0)
-        self.finger_slider_2.setMaximum(200)
-        self.finger_slider_2.setValue(0)
+        self.finger_slider_2.setMinimum(slider_min)
+        self.finger_slider_2.setMaximum(slider_max)
+        self.finger_slider_2.setValue(slider_min)
 
-        self.value_slider_2 = QLabel("0.00")
+        self.value_slider_2 = QLabel(str(slider_min))
         self.value_slider_2.setMaximumSize(80,20)
         self.f2_speed = QDoubleSpinBox()
-        self.f2_speed.setSingleStep(0.1)
-        self.f2_speed.setValue(0.5)
+        self.f2_speed.setSingleStep(spin_box_step)
+        self.f2_speed.setValue(spin_box_init)
+        self.f2_speed.setMaximum(spin_box_max)
         self.hbox_f2 = QHBoxLayout()
         self.hbox_f2.addWidget(self.finger_slider_2)
         self.hbox_f2.addWidget(self.value_slider_2)
         self.hbox_f2.addWidget(self.f2_speed)
-        self.hbox_f2.addWidget( QLabel("Rad/Sec"))
+        self.hbox_f2.addWidget( QLabel(speed_label))
 
         #Finger 3 row (F3)
         self.finger_label_3 = QLabel("Goal for f3")
         self.finger_slider_3 = QSlider(1)
-        self.finger_slider_3.setMinimum(0)
-        self.finger_slider_3.setMaximum(200)
-        self.finger_slider_3.setValue(0)
+        self.finger_slider_3.setMinimum(slider_min)
+        self.finger_slider_3.setMaximum(slider_max)
+        self.finger_slider_3.setValue(slider_min)
 
-        self.value_slider_3 = QLabel("0.00")
+        self.value_slider_3 = QLabel(str(slider_min))
         self.value_slider_3.setMaximumSize(80,20)
         self.f3_speed = QDoubleSpinBox()
-        self.f3_speed.setSingleStep(0.1)
-        self.f3_speed.setValue(0.5)
+        self.f3_speed.setSingleStep(spin_box_init)
+        self.f3_speed.setValue(spin_box_init)
+        self.f3_speed.setMaximum(spin_box_max)
         self.hbox_f3 = QHBoxLayout()
         self.hbox_f3.addWidget(self.finger_slider_3)
         self.hbox_f3.addWidget(self.value_slider_3)
         self.hbox_f3.addWidget(self.f3_speed)
-        self.hbox_f3.addWidget( QLabel("Rad/Sec"))
+        self.hbox_f3.addWidget( QLabel(speed_label))
 
         #Reflex SF hand distance between fingers (k1)
         self.finger_label_4 = QLabel("Distance between fingers 1 and 2")
         self.finger_slider_4 = QSlider(1)
-        self.finger_slider_4.setMinimum(0)
-        self.finger_slider_4.setMaximum(200)
-        self.finger_slider_4.setValue(0)
+        self.finger_slider_4.setMinimum(slider_min)
+        self.finger_slider_4.setMaximum(slider_max)
+        self.finger_slider_4.setValue(slider_min)
         #initialize at position 0
-        self.value_slider_4 = QLabel("0.00")
+        self.value_slider_4 = QLabel(str(slider_min))
         self.value_slider_4.setMaximumSize(80,20)
         self.f4_speed = QDoubleSpinBox()
-        self.f4_speed.setSingleStep(0.1)
-        self.f4_speed.setValue(0.5)
+        self.f4_speed.setSingleStep(spin_box_step)
+        self.f4_speed.setValue(spin_box_init)
+        self.f4_speed.setMaximum(spin_box_max)
         self.hbox_f4 = QHBoxLayout()
         self.hbox_f4.addWidget(self.finger_slider_4)
         self.hbox_f4.addWidget(self.value_slider_4)
         self.hbox_f4.addWidget(self.f4_speed)
-        self.hbox_f4.addWidget( QLabel("Rad/Sec"))
+        self.hbox_f4.addWidget( QLabel(speed_label))
 
         #Reflex SF hand thumb rotation (k2)
         #set range to -100 to 100 since it is easier for user to conceptualize
@@ -132,12 +141,13 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_5.setMaximum(100)
         self.finger_slider_5.setValue(0)
         #set initial value to center position
-        self.value_slider_5 = QLabel("0.00")
+        self.value_slider_5 = QLabel(str(slider_min))
         self.value_slider_5.setMaximumSize(80,20)
-        self.f5_speed_lbl = QLabel("Rad/Sec")
+        self.f5_speed_lbl = QLabel(speed_label)
         self.f5_speed = QDoubleSpinBox()
-        self.f5_speed.setSingleStep(0.1)
-        self.f5_speed.setValue(0.5)
+        self.f5_speed.setSingleStep(spin_box_step)
+        self.f5_speed.setValue(spin_box_init)
+        self.f5_speed.setMaximum(spin_box_max)
         self.hbox_f5 = QHBoxLayout()
         self.hbox_f5.addWidget(self.finger_slider_5)
         self.hbox_f5.addWidget(self.value_slider_5)
@@ -473,7 +483,7 @@ class ManualHandControlWidget(QWidget):
 
     def liveUpdateCntrl(self):
         while(True):
-            if (self.live_update.isChecked() and self.isVisible()):
+            if (self.isVisible() and self.live_update.isChecked()):
                 vel = VelocityCommand(f1=1,f2=1,f3=1,k1=1,k2=1)
                 pos = self.getSliderPose()
                 self.moveHandtoPose(Command(pose=pos,velocity=vel))
