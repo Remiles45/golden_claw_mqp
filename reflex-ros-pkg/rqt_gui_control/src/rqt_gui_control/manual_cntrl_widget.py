@@ -12,6 +12,7 @@ from os import listdir
 from os.path import isfile, join
 from calibration_widget import CalibrationWidget
 from file_wr import FileWriteRead
+from slider import Slider
 
 
 file = FileWriteRead()
@@ -54,9 +55,10 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_1 = QSlider(1)
         self.finger_slider_1.setMinimum(0)
         self.finger_slider_1.setMaximum(200)
-        self.finger_slider_1.setValue(0)
+        self.f1_ref = 0.00
+        self.finger_slider_1.setValue(self.f1_ref)
 
-        self.value_slider_1 = QLabel("0.00")
+        self.value_slider_1 = QLabel(str(self.f1_ref))
         self.value_slider_1.setMaximumSize(80,20)
         self.f1_speed = QDoubleSpinBox()
         self.f1_speed.setSingleStep(0.1)
@@ -241,18 +243,18 @@ class ManualHandControlWidget(QWidget):
         self.fbox.addRow(self.combo_label,self.combo)
 
         # Connect signal when slider change to function respectively to change value of label
-        self.finger_slider_1.valueChanged.connect(self.valuechange1)
-        self.finger_slider_2.valueChanged.connect(self.valuechange2)
-        self.finger_slider_3.valueChanged.connect(self.valuechange3)
-        self.finger_slider_4.valueChanged.connect(self.valuechange4)
-        self.finger_slider_5.valueChanged.connect(self.valuechange5)
+        self.finger_slider_1.valueChanged.connect(lambda:self.sliderMoved(1))
+        self.finger_slider_2.valueChanged.connect(lambda:self.sliderMoved(2))
+        self.finger_slider_3.valueChanged.connect(lambda:self.sliderMoved(3))
+        self.finger_slider_4.valueChanged.connect(lambda:self.sliderMoved(4))
+        self.finger_slider_5.valueChanged.connect(lambda:self.sliderMoved(5))
 
         # connect slider to measure distance scrolled
-        self.finger_slider_1.sliderPressed.connect(self.storeValue)
-        self.finger_slider_2.sliderPressed.connect(self.storeValue)
-        self.finger_slider_3.sliderPressed.connect(self.storeValue)
-        self.finger_slider_4.sliderPressed.connect(self.storeValue)
-        self.finger_slider_5.sliderPressed.connect(self.storeValue)
+        self.finger_slider_1.sliderPressed.connect(self.updateRefs)
+        self.finger_slider_2.sliderPressed.connect(self.updateRefs)
+        self.finger_slider_3.sliderPressed.connect(self.updateRefs)
+        self.finger_slider_4.sliderPressed.connect(self.updateRefs)
+        self.finger_slider_5.sliderPressed.connect(self.updateRefs)
 
         # Connect signal when slider has been released
         self.finger_slider_1.sliderReleased.connect(self.sliderRelease)
@@ -455,125 +457,63 @@ class ManualHandControlWidget(QWidget):
         if(self.live_update.isChecked()):
             self.handleButtonGo()
 
-    def storeValue(self):
+    # def storeValue(self):
+    #     """
+    #         Record what the last slider value was for reference
+    #     """
+    #     self.f1_ref = self.finger_slider_1.value()
+    #     self.f2_ref = self.finger_slider_2.value()
+    #     self.f3_ref = self.finger_slider_3.value()
+    #     self.f4_ref = self.finger_slider_4.value()
+    #     self.f5_ref = self.finger_slider_5.value()
+
+    def sliderMoved(self,active_slider):
         """
-            Record what the last slider value was for reference
+            update slider values and label texts according to slider coupling
         """
+        alt_slider_list = []
+        slide1 = Slider(slider=self.finger_slider_1,label_val=self.value_slider_1,ref=self.f1_ref,tick=self.tick_f1.isChecked())
+        slide2 = Slider(slider=self.finger_slider_2,label_val=self.value_slider_2,ref=self.f2_ref,tick=self.tick_f2.isChecked())
+        slide3 = Slider(slider=self.finger_slider_3,label_val=self.value_slider_3,ref=self.f3_ref,tick=self.tick_f3.isChecked())
+        slide4_tick = self.tick_f4.isChecked() if self.tick_f4.isVisible() else False
+        slide4 = Slider(slider=self.finger_slider_4,label_val=self.value_slider_4,ref=self.f4_ref,tick=slide4_tick)
+        slide5 = Slider(slider=self.finger_slider_5,label_val=self.value_slider_5,ref=self.f5_ref,tick=False)
+        if active_slider == 1:
+            this_slider = slide1
+            alt_slider_list = [slide2,slide3,slide4]#slider 5 cant be coupled
+        elif active_slider == 2:
+            this_slider = slide2
+            alt_slider_list = [slide1,slide3,slide4]#slider 5 cant be coupled
+        elif active_slider == 3:
+            this_slider = slide3
+            alt_slider_list = [slide1,slide2,slide4]#slider 5 cant be coupled
+        elif active_slider == 4:
+            this_slider = slide4
+            alt_slider_list = [slide1,slide2,slide3]#slider 5 cant be coupled
+        elif active_slider == 5:
+            this_slider = slide5
+
+        curr_value = float(this_slider.getVal())
+        float_value = curr_value/100.0
+        diff = abs(this_slider.getRef() - curr_value)
+        this_slider.setLabel("%2.2f" % float_value)
+        if this_slider.getTickCheck():
+            for slide in alt_slider_list:
+                if slide.getTickCheck():
+                    slide.setLabel("%2.2f" % float_value)
+                    slide.setSlider(this_slider.getVal())
+
+        if(self.live_update.isChecked() and (diff >= 10)):
+            self.handleButtonGo()
+            self.updateRefs()
+
+
+    def updateRefs(self):
         self.f1_ref = self.finger_slider_1.value()
         self.f2_ref = self.finger_slider_2.value()
         self.f3_ref = self.finger_slider_3.value()
         self.f4_ref = self.finger_slider_4.value()
         self.f5_ref = self.finger_slider_5.value()
-
-    def valuechange1(self):
-        """
-            when slider for finger 1 is dragged, check if other sliders
-            must also be updated and if live update is activated
-        """
-        curr_value = float(self.finger_slider_1.value())
-        float_value = curr_value/100.0
-        diff = abs(self.f1_ref - curr_value)
-        if((self.live_update.isChecked()) and (diff >= 10)):
-            self.f1_ref = curr_value
-            self.handleButtonGo()
-        self.value_slider_1.setText("%2.2f" % float_value)
-        #couple with selected fingers
-        if self.tick_f1.isChecked():
-            if self.tick_f2.isChecked():
-                self.value_slider_2.setText("%2.2f" % float_value)
-                self.finger_slider_2.setValue(self.finger_slider_1.value())
-            if self.tick_f3.isChecked():
-                self.value_slider_3.setText("%2.2f" % float_value)
-                self.finger_slider_3.setValue(self.finger_slider_1.value())
-            if self.tick_f4.isChecked() and self.tick_f4.isVisible():
-                self.value_slider_4.setText("%2.2f" % float_value)
-                self.finger_slider_4.setValue(self.finger_slider_1.value())
-
-    def valuechange2(self):
-        """
-            when slider for finger 2 is dragged, check if other sliders
-            must also be updated and if live update is activated
-        """
-        curr_value = float(self.finger_slider_2.value())
-        float_value = curr_value/100.0
-        diff = abs(self.f2_ref - curr_value)
-        if((self.live_update.isChecked()) and (diff >= 10)):
-            self.f2_ref = curr_value
-            self.handleButtonGo()
-        self.value_slider_2.setText("%2.2f" % float_value)
-        #couple with selected fingers
-        if self.tick_f2.isChecked():
-            if self.tick_f1.isChecked():
-                self.value_slider_1.setText("%2.2f" % float_value)
-                self.finger_slider_1.setValue(self.finger_slider_2.value())
-            if self.tick_f3.isChecked():
-                self.value_slider_3.setText("%2.2f" % float_value)
-                self.finger_slider_3.setValue(self.finger_slider_2.value())
-            if self.tick_f4.isChecked() and self.tick_f4.isVisible():
-                self.value_slider_4.setText("%2.2f" % float_value)
-                self.finger_slider_4.setValue(self.finger_slider_2.value())
-
-    def valuechange3(self):
-        """
-            when slider for finger 3 is dragged, check if other sliders
-            must also be updated and if live update is activated
-        """
-        curr_value = float(self.finger_slider_3.value())
-        float_value = curr_value/100.0
-        diff = abs(self.f3_ref - curr_value)
-        if((self.live_update.isChecked()) and (diff >= 10)):
-            self.f3_ref = curr_value
-            self.handleButtonGo()
-        self.value_slider_3.setText("%2.2f" % float_value)
-        #couple with selected fingers
-        if self.tick_f3.isChecked():
-            if self.tick_f1.isChecked():
-                self.value_slider_1.setText("%2.2f" % float_value)
-                self.finger_slider_1.setValue(self.finger_slider_3.value())
-            if self.tick_f2.isChecked():
-                self.value_slider_2.setText("%2.2f" % float_value)
-                self.finger_slider_2.setValue(self.finger_slider_3.value())
-            if self.tick_f4.isChecked() and self.tick_f4.isVisible():
-                self.value_slider_4.setText("%2.2f" % float_value)
-                self.finger_slider_4.setValue(self.finger_slider_3.value())
-
-    def valuechange4(self):
-        """
-            when slider for finger 4 is dragged, check if other sliders
-            must also be updated and if live update is activated
-        """
-        curr_value = float(self.finger_slider_4.value())
-        float_value = curr_value/100.0
-        diff = abs(self.f4_ref - curr_value)
-        if((self.live_update.isChecked()) and (diff >= 10)):
-            self.f4_ref = curr_value
-            self.handleButtonGo()
-        self.value_slider_4.setText("%2.2f" % float_value)
-        #only allow coupling of slider 4 for the soft hand
-        if self.tick_f4.isChecked() and self.tick_f4.isVisible():
-            if self.tick_f1.isChecked():
-                self.value_slider_1.setText("%2.2f" % float_value)
-                self.finger_slider_1.setValue(self.finger_slider_4.value())
-            if self.tick_f2.isChecked():
-                self.value_slider_2.setText("%2.2f" % float_value)
-                self.finger_slider_2.setValue(self.finger_slider_4.value())
-            if self.tick_f3.isChecked():
-                self.value_slider_3.setText("%2.2f" % float_value)
-                self.finger_slider_3.setValue(self.finger_slider_4.value())
-
-    def valuechange5(self):
-        """
-            when slider for the thumb rotation on the SF hand is
-            dragged, check if other sliders must also be updated
-            and if live update is activated, will never be coupled
-        """
-        curr_value = float(self.finger_slider_5.value())
-        float_value = curr_value/100.0
-        diff = abs(self.f5_ref - curr_value)
-        if((self.live_update.isChecked()) and (diff >= 10)):
-            self.f5_ref = curr_value
-            self.handleButtonGo()
-        self.value_slider_5.setText("%2.2f" % float_value)
 
 ######## Manage Waypoint List ##################################################################################
     def populate_commandlist(self):
