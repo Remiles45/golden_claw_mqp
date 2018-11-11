@@ -2,6 +2,7 @@ import os
 import sys
 import rospkg
 import rospy
+import thread
 
 from python_qt_binding.QtWidgets import *
 from python_qt_binding.QtGui import *
@@ -35,7 +36,8 @@ class ManualHandControlWidget(QWidget):
         self.command_pub_softhand_2 = rospy.Publisher('UbirosGentlePro2', UInt16, queue_size=1)
         self.command_pub_softhand_3 = rospy.Publisher('UbirosGentlePro3', UInt16, queue_size=1)
         self.command_pub_softhand_4 = rospy.Publisher('UbirosGentlePro4', UInt16, queue_size=1)
-
+        #start thread for live update
+        thread.start_new_thread(self.liveUpdateCntrl, ())
 
 
     def initUI(self):
@@ -55,10 +57,9 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_1 = QSlider(1)
         self.finger_slider_1.setMinimum(0)
         self.finger_slider_1.setMaximum(200)
-        self.f1_ref = 0.00
-        self.finger_slider_1.setValue(self.f1_ref)
+        self.finger_slider_1.setValue(0.00)
 
-        self.value_slider_1 = QLabel(str(self.f1_ref))
+        self.value_slider_1 = QLabel("0.00")
         self.value_slider_1.setMaximumSize(80,20)
         self.f1_speed = QDoubleSpinBox()
         self.f1_speed.setSingleStep(0.1)
@@ -249,20 +250,6 @@ class ManualHandControlWidget(QWidget):
         self.finger_slider_4.valueChanged.connect(lambda:self.sliderMoved(4))
         self.finger_slider_5.valueChanged.connect(lambda:self.sliderMoved(5))
 
-        # connect slider to measure distance scrolled
-        self.finger_slider_1.sliderPressed.connect(self.updateRefs)
-        self.finger_slider_2.sliderPressed.connect(self.updateRefs)
-        self.finger_slider_3.sliderPressed.connect(self.updateRefs)
-        self.finger_slider_4.sliderPressed.connect(self.updateRefs)
-        self.finger_slider_5.sliderPressed.connect(self.updateRefs)
-
-        # Connect signal when slider has been released
-        self.finger_slider_1.sliderReleased.connect(self.sliderRelease)
-        self.finger_slider_2.sliderReleased.connect(self.sliderRelease)
-        self.finger_slider_3.sliderReleased.connect(self.sliderRelease)
-        self.finger_slider_4.sliderReleased.connect(self.sliderRelease)
-        self.finger_slider_5.sliderReleased.connect(self.sliderRelease)
-
         # Add connect signal to Button Go, Cancel and Reset
         self.go_button.clicked.connect(self.handleButtonGo)
         self.home_button.clicked.connect(self.handleButtonHome)
@@ -449,35 +436,17 @@ class ManualHandControlWidget(QWidget):
             self.moveHandtoPose(pose)
 
 ######### Finger Slider Handlers ###############################################################
-    def sliderRelease(self):
-        """
-            When live update is activated, send the hand to the current slider
-            pose when the user releases the click on the slider
-        """
-        if(self.live_update.isChecked()):
-            self.handleButtonGo()
-
-    # def storeValue(self):
-    #     """
-    #         Record what the last slider value was for reference
-    #     """
-    #     self.f1_ref = self.finger_slider_1.value()
-    #     self.f2_ref = self.finger_slider_2.value()
-    #     self.f3_ref = self.finger_slider_3.value()
-    #     self.f4_ref = self.finger_slider_4.value()
-    #     self.f5_ref = self.finger_slider_5.value()
-
     def sliderMoved(self,active_slider):
         """
             update slider values and label texts according to slider coupling
         """
         alt_slider_list = []
-        slide1 = Slider(slider=self.finger_slider_1,label_val=self.value_slider_1,ref=self.f1_ref,tick=self.tick_f1.isChecked())
-        slide2 = Slider(slider=self.finger_slider_2,label_val=self.value_slider_2,ref=self.f2_ref,tick=self.tick_f2.isChecked())
-        slide3 = Slider(slider=self.finger_slider_3,label_val=self.value_slider_3,ref=self.f3_ref,tick=self.tick_f3.isChecked())
+        slide1 = Slider(slider=self.finger_slider_1,label_val=self.value_slider_1,tick=self.tick_f1.isChecked())
+        slide2 = Slider(slider=self.finger_slider_2,label_val=self.value_slider_2,tick=self.tick_f2.isChecked())
+        slide3 = Slider(slider=self.finger_slider_3,label_val=self.value_slider_3,tick=self.tick_f3.isChecked())
         slide4_tick = self.tick_f4.isChecked() if self.tick_f4.isVisible() else False
-        slide4 = Slider(slider=self.finger_slider_4,label_val=self.value_slider_4,ref=self.f4_ref,tick=slide4_tick)
-        slide5 = Slider(slider=self.finger_slider_5,label_val=self.value_slider_5,ref=self.f5_ref,tick=False)
+        slide4 = Slider(slider=self.finger_slider_4,label_val=self.value_slider_4,tick=slide4_tick)
+        slide5 = Slider(slider=self.finger_slider_5,label_val=self.value_slider_5,tick=False)
         if active_slider == 1:
             this_slider = slide1
             alt_slider_list = [slide2,slide3,slide4]#slider 5 cant be coupled
@@ -495,7 +464,6 @@ class ManualHandControlWidget(QWidget):
 
         curr_value = float(this_slider.getVal())
         float_value = curr_value/100.0
-        diff = abs(this_slider.getRef() - curr_value)
         this_slider.setLabel("%2.2f" % float_value)
         if this_slider.getTickCheck():
             for slide in alt_slider_list:
@@ -503,18 +471,13 @@ class ManualHandControlWidget(QWidget):
                     slide.setLabel("%2.2f" % float_value)
                     slide.setSlider(this_slider.getVal())
 
-        if(self.live_update.isChecked() and (diff >= 10)):
-            self.handleButtonGo()
-            self.updateRefs()
-
-
-    def updateRefs(self):
-        self.f1_ref = self.finger_slider_1.value()
-        self.f2_ref = self.finger_slider_2.value()
-        self.f3_ref = self.finger_slider_3.value()
-        self.f4_ref = self.finger_slider_4.value()
-        self.f5_ref = self.finger_slider_5.value()
-
+    def liveUpdateCntrl(self):
+        while(True):
+            if (self.live_update.isChecked()):
+                vel = VelocityCommand(f1=1,f2=1,f3=1,k1=1,k2=1)
+                pos = self.getSliderPose()
+                self.moveHandtoPose(Command(pose=pos,velocity=vel))
+            rospy.sleep(0.2)
 ######## Manage Waypoint List ##################################################################################
     def populate_commandlist(self):
         """
