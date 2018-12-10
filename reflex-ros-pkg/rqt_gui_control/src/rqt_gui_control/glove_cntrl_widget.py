@@ -46,7 +46,7 @@ class GloveWidget(QWidget):
             Callback for glove data msg.
             convert message to Command() and add to list
         """
-        if self.live_update.isChecked():
+        if self.live_update.isChecked() and self.isVisible():
             tar_f1 = float(values.data[0])/100
             tar_f2 = float(values.data[1])/100
             tar_f3 = float(values.data[2])/100

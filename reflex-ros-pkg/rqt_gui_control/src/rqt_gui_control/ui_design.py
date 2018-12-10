@@ -12,6 +12,7 @@ class SetUpUI(QMdiArea):
         self.leftlist = QListWidget ()
         self.leftlist.insertItem (0, 'Manual Control' )
         self.leftlist.insertItem (1, 'Glove Control' )
+        self.leftlist.setMaximumSize(200,100)
 
         self.stack = QStackedWidget()
         self.stack.addWidget(self.manual)
