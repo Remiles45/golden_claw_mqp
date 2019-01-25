@@ -4,9 +4,11 @@ Instructions to operate hand:
 *reflex_sf.launch is assuming that the hand is plugged into USB0 (first thing you plug into your USB port)
 
   -Start up Reflex hand: 
-    roslaunch reflex reflex_sf.launch 
+  
+    roslaunch reflex reflex_sf.launch
   
   -Start up GUI:  
+  
     rqt --standalone rqt_gui_control
   
   -Start up Glove: 
