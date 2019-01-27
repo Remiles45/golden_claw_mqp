@@ -46,13 +46,14 @@ class GloveWidget(QWidget):
             Callback for glove data msg.
             convert message to Command() and add to list
         """
+        tar_f1 = float(values.data[0])/100
+        tar_f2 = float(values.data[1])/100
+        tar_f3 = float(values.data[2])/100
+        pose = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=0,k2=1)
+        vel = VelocityCommand(f1=1.5,f2=1.5,f3=1.5,k1=0,k2=0)
+        command = Command(pose=pose,velocity=vel)
         if self.live_update.isChecked() and self.isVisible():
-            tar_f1 = float(values.data[0])/100
-            tar_f2 = float(values.data[1])/100
-            tar_f3 = float(values.data[2])/100
-            pose = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=0,k2=1)
-            vel = VelocityCommand(f1=1.5,f2=1.5,f3=1.5,k1=0,k2=0)
-            command = Command(pose=pose,velocity=vel)
+
             self.command_pub.publish(command)
         if self.record_button.text() == "Stop Recording":
             self.listCommand.append(command)
