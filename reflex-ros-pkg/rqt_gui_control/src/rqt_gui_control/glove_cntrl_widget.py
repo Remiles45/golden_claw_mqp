@@ -49,8 +49,10 @@ class GloveWidget(QWidget):
         tar_f1 = float(values.data[0])/100
         tar_f2 = float(values.data[1])/100
         tar_f3 = float(values.data[2])/100
-        pose = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=0,k2=1)
-        vel = VelocityCommand(f1=1.5,f2=1.5,f3=1.5,k1=0,k2=0)
+        tar_k1 = float(values.data[3])/100
+        tar_k2 = (float(values.data[4])/100) - 1
+        pose = PoseCommand(f1=tar_f1,f2=tar_f2,f3=tar_f3,k1=tar_k1,k2=tar_k2)
+        vel = VelocityCommand(f1=1.5,f2=1.5,f3=1.5,k1=1.5,k2=1.5)
         command = Command(pose=pose,velocity=vel)
         if self.live_update.isChecked() and self.isVisible():
 
